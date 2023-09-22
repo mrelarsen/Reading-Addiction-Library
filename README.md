@@ -1,12 +1,12 @@
 # Reading addiction library
 
-Reads content of sites and saves as "bookmark".
+Reads content of sites using text-to-speech and saves visited sites as bookmarks.
 
 This project uses Sciter for UI in a combination with Python using PySciter.
 
 All features are currently only supported on Windows.
 
-This project was not created to replace websites and author-reader interactions, but to improve reading experience and save progress. Please do show support and comment on the author's or translator's work, on social media or the relevant websites.
+This project was not created to replace or copy websites nor replace author-reader interactions, but to improve reading experience and save progress. Please do show support and comment on the author's or translator's work, on social media or the relevant websites.
 
 ## Disclaimer(Not all content is covered by the license, the /libraries folder is excluded as it contains external licenses):
 
