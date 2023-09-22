@@ -6,9 +6,9 @@ This project uses Sciter for UI in a combination with Python using PySciter.
 
 All features are currently only supported on Windows.
 
-## Disclaimer(Not all content is covered by the license, /libraries folders are excluded):
+This project was not created to replace websites and author-reader interactions, but to improve reading experience and save progress. Please do show support and comment on the author's or translator's work, on social media or the relevant websites.
 
-### I did not create the content found in the /libraries folders.
+## Disclaimer(Not all content is covered by the license, the /libraries folder is excluded as it contains external licenses):
 
 - fichub: https://github.com/FicHub/fichub-cli (Apache License 2.0)
 - pyttx3: https://github.com/nateshmbhat/pyttsx3 (Mozilla Public License 2.0) with some changes to support pause and reading highlighting
