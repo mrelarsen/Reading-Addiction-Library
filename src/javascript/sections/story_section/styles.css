@@ -1,0 +1,46 @@
+@import url(../../../../libraries/richtext-editor/styles.css);
+table.virtual-table {
+  size: *;
+  border: 1px solid #ccc;
+}
+
+tbody.virtual-body {
+  overflow: scroll-indicator;
+  size: *;
+}
+
+table.virtual-table > thead.virtual-head {
+  border-bottom: 1px solid #ccc;
+  behavior: column-resizer;
+}
+table.virtual-table > thead.virtual-body > tr > th:nth-child(1) {
+  width: 8em;
+}
+table.virtual-table > thead.virtual-body > tr > th:nth-child(2) {
+  width: *;
+}
+
+tbody.virtual-body tr[expanded] th {
+  // header group
+  behavior: clickable; // will generate clicks
+  color: #fff;
+  line-height: 1.6em;
+  height: 1.6em;
+  padding-left: 2em;
+  background: #444 no-repeat 0.5em 50%;
+  background-image: url(stock:chevron-right);
+  background-size: 0.6em;
+  fill: #fff;
+}
+
+tbody.virtual-body tr[expanded="true"] th {
+  // expanded header group
+  background-image: url(stock:chevron-down);
+}
+
+.details:collapsed {
+  visibility: hidden;
+}
+.details:not(:collapsed) {
+  visibility: visible;
+}

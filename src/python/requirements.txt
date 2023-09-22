@@ -1,0 +1,13 @@
+AppKit==0.2.8
+comtypes==1.1.11
+cssutils==2.4.0
+Foundation==0.1.0a0.dev1
+lxml==4.8.0
+Pillow==9.0.1
+Pillow==10.0.1
+pyperclip==1.8.2
+PySciter==0.6.6
+pywin32==303
+Requests==2.31.0
+selectolax==0.3.11
+selenium==4.12.0

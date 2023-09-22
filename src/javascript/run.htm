@@ -1,0 +1,20 @@
+<html resizeable>
+  <head>
+    <title>Loudreader</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="../../libraries/methods.js"></script>
+    <script type="module" src="./run.js"></script>
+  </head>
+  <body.dark-mode>
+    <div #tabs class="header sticky">
+      <label #reader_section_tab>Reader</label>
+      <label #story_section_tab>Stories</label>
+    </div>
+    <section #reader_section aria-checked="false" class="content section">
+      <include src="sections/reader_section/reader_section.htm"/>
+    </section>
+    <section #story_section aria-checked="false" class="content section">
+      <include src="sections/story_section/story_section.htm"/>
+    </section>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+<html resizeable>
+  <head>
+    <title>Edit chapter</title>
+    <script type="module" src="./edit_chapter_modal.js"></script>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body.dark-mode>
+    <label #lbl_chapter_title>Chapter title</label><br>
+    <input.dark.mt-1.mb-1 #inp_chapter_title type="text" style="width:*;"></input><br>
+    <label #lbl_chapter_status>Chapter status</label><br>
+    <select.dark.mt-1.mb-1 #sel_chapter_status style="width:*;">
+    </select><br>
+    <label #lbl_chapter_desc>Chapter description</label>
+    <richtext.dark #inp_chapter_desc style="width:*;height:*;">
+      <toolbar.dark>
+        <button.dark.bold></button>
+        <button.dark.italic></button>
+        <button.dark.sub></button>
+        <button.dark.sup></button>
+        <button.dark.del></button>
+        <button.dark.underline></button>
+        <button.dark.code></button>
+      </toolbar>
+      <htmlarea.dark/>
+    </richtext>
+    <button.dark #btn_chapter_save>Save chapter</button>
+  </body>
+</html>

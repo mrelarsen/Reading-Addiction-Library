@@ -1,0 +1,62 @@
+<html resizeable>
+  <head>
+    <title>Column settings</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <script|module>
+      const { metadata, visible, setVisibleColumns, filters, excludes, setColumnFilters } = Window.this.parameters;
+      const btn = document.$('button');
+      const override = document.$('.override');
+      
+      const trs = metadata.map(column => (
+        <tr>
+          <td style="border: 1px solid beige; text-align: center;">{column[1].title}</td>
+          <td style="border: 1px solid beige; text-align: center;"><input class="visible dark" column={column[0]} type="checkbox" checked={visible.includes(column[0])}/></td>
+          <td style="border: 1px solid beige; text-align: center;"><input class="filter dark" column={column[0]} type="text" value={filters[column[0]]}/></td>
+          <td style="border: 1px solid beige; text-align: center;"><input class="exclude dark" column={column[0]} type="text" value={excludes[column[0]]}/></td>
+        </tr>
+      ));
+      
+      override.patch(
+        <div>
+          <table style="margin-left:2px; border-collapse: collapse; width: 100%;">
+            <thead>
+              <tr>
+                <th>Column</th>
+                <th>Visible</th>
+                <th>Filter includes</th>
+                <th>Filter excludes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trs}
+            </tbody>
+          </table>
+        </div>
+      );
+
+      const inputVisibles = metadata.map(column => document.$(`.visible[column="${column[0]}"]`));
+      const inputFilters = metadata.map(column => document.$(`.filter[column="${column[0]}"]`));
+      const inputExcludes = metadata.map(column => document.$(`.exclude[column="${column[0]}"]`));
+
+      btn.on('click', save);
+
+      function save() {
+        if (typeof setVisibleColumns === 'function') {
+          setVisibleColumns(inputVisibles.filter(x => x.value).map(x => x.attributes['column']));
+        }
+        if (typeof setColumnFilters === 'function') {
+          const filterMap = {};
+          inputFilters.forEach(x => filterMap[x.attributes['column']] = x.value)
+          const excludeMap = {};
+          inputExcludes.forEach(x => excludeMap[x.attributes['column']] = x.value)
+          setColumnFilters(filterMap, excludeMap);
+        }
+        Window.this.close();
+      }
+    </script>
+  </head>
+  <body.dark-mode>
+    <div.override></div>
+    <button.dark>Save</button>
+  </body>
+</html>

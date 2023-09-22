@@ -1,0 +1,39 @@
+<html resizeable>
+  <head>
+    <title>title</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <script|module>
+      const { title, filter, exclude, setFilter } = Window.this.parameters;
+      const btn = document.$('button');
+      const inpFilter = document.$('input.filter');
+      const inpExclude = document.$('input.exclude');
+      const enter = 257;
+
+      Window.this.caption = `Filter: ${title}`;
+      inpFilter.textContent = filter || '';
+      inpExclude.textContent = exclude || '';
+
+      btn.on('click', sendFilter);
+      inpFilter.on('keydown', (evt) => evt.keyCode === enter ? sendFilter() : null);
+      inpExclude.on('keydown', (evt) => evt.keyCode === enter ? sendFilter() : null);
+
+      function sendFilter() {
+        if (typeof setFilter === 'function') {
+          setFilter(inpFilter.textContent, inpExclude.textContent);
+        }
+        Window.this.close();
+      }
+    </script>
+  </head>
+  <body.dark-mode>
+    <div style="padding-top: 5px;">
+      <label.dark >Include:</label>
+      <input.dark class="filter" style="width: *;"/>
+    </div>
+    <div style="padding-top: 5px;">
+      <label.dark style="margin-top: 5px;">Exclude:</label>
+      <input.dark class="exclude" style="width: *;"/>
+    </div>
+    <button.dark>Filter</button>
+  </body>
+</html>

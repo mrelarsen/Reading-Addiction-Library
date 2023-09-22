@@ -1,0 +1,29 @@
+<html resizeable>
+  <head>
+    <title>Edit Story</title>
+    <script type="module" src="./edit_story_modal.js"></script>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body.dark-mode>
+  <label #lbl_story_title>Story title</label><br>
+  <input.dark #inp_story_title type="text" style="width:*;"></input><br>
+  <label #lbl_story_rating>Rating</label><br>
+  <input.dark #inp_story_rating type="text" style="width:*;"></input><br>
+  <label #lbl_story_tags>Tags</label><br>
+  <input.dark #inp_story_tags type="text" style="width:*;"></input><br>
+  <label #lbl_story_desc>Story description</label><br>
+  <richtext.dark #inp_story_desc style="width:*;height:*;">
+    <toolbar.dark>
+      <button.dark.bold></button>
+      <button.dark.italic></button>
+      <button.dark.sub></button>
+      <button.dark.sup></button>
+      <button.dark.del></button>
+      <button.dark.underline></button>
+      <button.dark.code></button>
+    </toolbar>
+    <htmlarea.dark/>
+  </richtext>
+  <button.dark #btn_story_save>Save story</button>
+  </body>
+</html>

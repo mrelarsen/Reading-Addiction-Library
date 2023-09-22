@@ -1,0 +1,44 @@
+<script type="module" src="./sections/reader_section/reader_section.js"></script>
+
+<div #rdr_header class="sub-header">
+  <div #rdr_controls .mb-2>
+    <button.dark #rdr_btn_read>Read</button>
+    <button.dark #rdr_btn_prev>Prev Chapter</button>
+    <button.dark #rdr_btn_next>Next Chapter</button>
+    <button.dark #rdr_btn_pause>Pause</button>
+  </div>
+  <div #rdr_extras>
+    <button.dark #rdr_btn_copy>Copy url</button>
+    <button.dark #rdr_btn_copy_prev>Copy prev</button>
+    <button.dark #rdr_btn_copy_next>Copy next</button>
+    <button.dark #rdr_btn_settings>Settings</button>
+    <div.inline style="text-align:right;vertical-align: bottom;">
+      <button.dark #rdr_btn_download title="Download as .wav">
+        <icon.icon-download></icon>
+      </button>
+      <button.dark #rdr_btn_open_file title="Read from file">
+        <icon.icon-open-file></icon>
+      </button>
+      <button.dark #rdr_btn_paste title="Paste n' Read">
+        <icon.icon-paste></icon>
+      </button>
+      <button.dark #rdr_btn_reset title="Reset reader">
+        <icon.icon-reset></icon>
+      </button>
+    </div>
+  </div>
+</div>
+<div class="loader">
+  <div class="loaderBar"></div>
+</div>
+<div class="content pl-4" style="overflow-y:scroll-indicator;">
+  <div #rdr_content class="pr-4" selectable style="width:*;height:*">
+  </div>
+</div>
+<div.footer>
+  <label #rdr_lbl_progress>(-/-)</label>
+  <label #rdr_lbl_title>Chapter title</label>
+  <div.inline style="text-align:right;vertical-align: bottom;">
+    <label #rdr_lbl_story_title>Story title</label>
+  </div>
+</div>

@@ -1,0 +1,29 @@
+<script type="module" src="./sections/story_section/story_section.js"></script>
+
+<div.content>
+  <frameset cols="*,*">
+    <frameset rows="*,*">
+      <div.dark-mode>
+        <div.h-5.center.tm-2>
+          <label #sts_lbl_url>Stories:</label>
+          <button.dark #sts_btn_query_all>Query all</button>
+          <button.dark #mrg_btn_file title="Merge another database into the current one">DB merge</button>
+        </div>
+        <div #story_picker></div>
+        <!-- <button.dark #sts_btn_story_edit>Edit story</button>
+        <button.dark #sts_btn_story_merge>Merge stories</button> -->
+      </div>
+    </frameset>
+    <splitter.dark/>
+    <frameset rows="*,*">
+      <div.dark-mode>
+        <div.h-5.center.tm-2>
+          <label #sts_lbl_url>Chapters:</label>
+          <button.dark #sts_btn_read_summaries>Read summaries</button>
+        </div>
+        <div #chapter_picker></div>
+        <!-- <button.dark #sts_btn_chapter_edit>Edit chapter</button> -->
+      </div>
+    </frameset>
+  </frameset>
+</div>
