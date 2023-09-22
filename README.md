@@ -4,6 +4,8 @@ Reads content of sites and saves as "bookmark".
 
 This project uses Sciter for UI in a combination with Python using PySciter.
 
+All features are currently only supported on Windows.
+
 ## Disclaimer(Not all content is covered by the license, /libraries folders are excluded):
 
 ### I did not create the content found in the /libraries folders.
@@ -17,6 +19,7 @@ This project uses Sciter for UI in a combination with Python using PySciter.
 
 ## TODOs:
 
-- alts and dictionary entries for control without mouse interaction
-- Show features based on installs or OS
+- Add html title attributes
+- Add keyboard control without any need for mouse interaction
+- Hide/show features based on packages installed or OS
 - Create guide to use or extend functionality
