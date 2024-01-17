@@ -8,7 +8,7 @@ class History():
         pass
 
     def add_chapter(self, url, result: ScraperResult, domain, status=ReadingStatus.COMPLETED):
-        self.db.create_chapter(url, result, domain, status);
+        return self.db.create_chapter(url, result, domain, status);
 
     def get_stories(self, term = None):
         return self.db.get_stories(term);

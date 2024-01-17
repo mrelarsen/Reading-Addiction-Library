@@ -13,7 +13,7 @@ def dict_factory(cursor, row):
         elif col[0] == 'uuid':
             d[col[0]] = str(uuid.UUID(bytes_le=row[idx]));
         elif col[0] == 'status':
-            d[col[0]] = ReadingStatus(row[idx]).name.lower();
+            d[col[0]] = ReadingStatus(row[idx]).name.lower().replace('_', ' ');
         else:
             d[col[0]] = row[idx];
     return d
@@ -74,6 +74,7 @@ class StoryDatabase():
     def create_chapter(self, url: str, result: ScraperResult, domain_value: str, status: ReadingStatus):
         print('create chapter', url, domain_value, result.keys.story, result.keys.chapter, result.story_type, result.title);
         conn = sqlite3.connect(self.database_path);
+        conn.row_factory = dict_factory_pure;
         cursor = conn.cursor();
         cursor.execute(f"""SELECT domain.id FROM domain LEFT JOIN story ON story.id = domain.story_id WHERE domain.domain = "{domain_value}" and domain.key = "{result.keys.story}" and story.type = "{result.story_type.value}" """);
         domain = cursor.fetchone();
@@ -86,18 +87,22 @@ class StoryDatabase():
             cursor.execute(f"""INSERT INTO domain (uuid,key,domain,story_id) VALUES (?, "{result.keys.story}", "{domain_value}", "{story_id}")""", (domain_uuid,));
             domain_id = cursor.lastrowid;
         else: 
-            domain_id = domain[0];
-        cursor.execute(f"""SELECT status FROM chapter WHERE domain_id = "{domain_id}" and key = "{result.keys.chapter}" """);
+            domain_id = domain['id'];
+        cursor.execute(f"""SELECT status, id FROM chapter WHERE domain_id = "{domain_id}" and key = "{result.keys.chapter}" """);
         chapter = cursor.fetchone();
+        chapter_id = None;
         if not chapter:
             chapter_uuid = self.get_unique_identifier(cursor, "chapter");
             cursor.execute(f"""INSERT INTO chapter (uuid,name,desc,key,url,status,created,domain_id) VALUES (?, "{self.esc_quotes(result.title)}", "", "{result.keys.chapter}", "{self.esc_quotes(url)}", ?, ?, ?)""",
                 (chapter_uuid, status.value, datetime.now(), domain_id,));
+            chapter_id = cursor.lastrowid;
         else:
-            status_str = '' if chapter[0] == ReadingStatus.COMPLETED else ', status = ?';
-            cursor.execute(f"""UPDATE chapter SET updated = ? {status_str} WHERE domain_id = "{domain_id}" and key = "{result.keys.chapter}" """, (datetime.now(), status.value,))
+            chapter_id = chapter['id']
+            status_str = '' if chapter['status'] == ReadingStatus.COMPLETED else ', status = ?';
+            cursor.execute(f"""UPDATE chapter SET updated = ? {status_str} WHERE id = {chapter_id} """, (datetime.now(), status.value,))
         conn.commit();
         conn.close();
+        return chapter_id;
 
     def get_stories(self, term = None, pure=False) -> list[dict]:
         conn = sqlite3.connect(self.database_path);
@@ -186,23 +191,47 @@ class StoryDatabase():
         missing_story_commands = [];
         missing_domains = [];
         missing_chapters = [];
+        # Get all updated stories, domains and chapters
+        updated_story_commands = [];
+        updated_chapters = [];
 
         for ext_chapter in ext_chapters:
-            if not existing_chapters.get(ext_chapter['uuid']):
+            existing_chapter = existing_chapters.get(ext_chapter['uuid']);
+            if not existing_chapter:
                 ext_domain = ext_domains_map[ext_chapter['domain_id']];
                 ext_story = ext_stories_map[ext_domain['story_id']];
-                existing_domain = existing_domains.get(ext_domain['uuid']) or next([x for x in missing_domains if x[1][0] == ext_domain['uuid']], None);
-                if not existing_domain:
-                    existing_story = existing_stories.get(ext_story['uuid']) or next([x for x in missing_story_commands if x[0] == ext_story['uuid']], None);
-                    if not existing_story:
-                        missing_story_commands.append([uuid.UUID(bytes_le=ext_story['uuid']), self.esc_quotes(ext_story['name']), self.esc_quotes(ext_story['desc']), ext_story['type'], ext_story['rating']]);
+                existing_domain = existing_domains.get(ext_domain['uuid']) or next((x for x in missing_domains if x[1][0] == ext_domain['uuid']), None);
+                if not existing_domain and not next((x for x in missing_domains if x[0] == ext_domain['uuid']), None):
+                    existing_story = existing_stories.get(ext_story['uuid']) or next((x for x in missing_story_commands if x[0] == ext_story['uuid']), None);
+                    if not existing_story and not next((x for x in missing_story_commands if x[0] == uuid.UUID(bytes_le=ext_story['uuid'])), None):
+                        missing_story_commands.append([uuid.UUID(bytes_le=ext_story['uuid']), self.esc_quotes(ext_story['name']), self.esc_quotes(ext_story['desc']), ext_story['type'], ext_story['rating'], ext_story['tags']]);
                     missing_domains.append((ext_story['uuid'], [uuid.UUID(bytes_le=ext_domain['uuid']), ext_domain['key'], ext_domain['domain'], existing_story['id'] if existing_story else 0]));
                 missing_chapters.append((ext_domain['uuid'], [uuid.UUID(bytes_le=ext_chapter['uuid']), self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(ext_chapter['url']), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain['id'] if existing_domain else 0]));
+            else:
+                ext_domain = ext_domains_map[ext_chapter['domain_id']];
+                ext_story = ext_stories_map[ext_domain['story_id']];
+                existing_domain = existing_domains.get(ext_domain['uuid']) or next((x for x in missing_domains if x[1][0] == ext_domain['uuid']), None);
+                existing_story = existing_stories.get(ext_story['uuid']) or next((x for x in missing_story_commands if x[0] == ext_story['uuid']), None);
+                updated = existing_chapter['updated'] if not ext_chapter['updated'] or (existing_chapter['updated'] and existing_chapter['updated'] > ext_chapter['updated']) else ext_chapter['updated'];
+                status = ReadingStatus.COMPLETED if existing_chapter['status'] == ReadingStatus.COMPLETED else ext_chapter['status'];
+                if existing_chapter['updated'] != updated or existing_chapter['status'] != status:
+                    updated_chapters.append([status, updated, existing_chapter['id']]);
+                if next((x for x in updated_story_commands if x['id'] != existing_story['id']), None):
+                    rating = existing_story['rating'] if ext_story['rating'] != existing_story['rating'] and (existing_story['rating'] == 0 or existing_story['rating'] == None) else ext_story['rating'];
+                    tags = " ".join(self.unique(ext_story['tags'].split(' ') + existing_story['tags'].split(' ')))
+                    if existing_story['rating'] != rating or existing_story['tags'] != tags:
+                        updated_story_commands.append([rating, tags, existing_story['id']]);
+        
+        if len(updated_chapters) > 0:
+            cursor.executemany("UPDATE chapter SET status=?, updated=? WHERE id=?", updated_chapters);
+        if len(updated_story_commands) > 0:
+            cursor.executemany("UPDATE story SET rating=?, tags=? WHERE id=?", updated_story_commands);
 
+        
         # Create all missing stories, domains and chapters
         created_stories = [];
         last_story_id = cursor.execute("SELECT max(id) from story").fetchone()['max(id)'];
-        cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating) VALUES (?,?,?,?,?)", missing_story_commands);
+        cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", missing_story_commands);
         created_stories = cursor.execute("SELECT id,uuid,name FROM story WHERE id > ? ORDER BY id ASC", (last_story_id,)).fetchall();
 
         for missing_domain in missing_domains:
@@ -230,6 +259,13 @@ class StoryDatabase():
         conn.commit();
         conn.close();
         return created_stories, created_domains, created_chapters;
+
+    def unique(self, list1):
+        unique_list = [];
+        for x in list1:
+            if x not in unique_list:
+                unique_list.append(x);
+        return unique_list;
 
     def get_unique_identifier(self, cursor: sqlite3.Cursor, type: str):
         for _ in range(0,20):

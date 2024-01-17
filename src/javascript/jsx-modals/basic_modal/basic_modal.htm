@@ -1,0 +1,15 @@
+<html resizeable>
+  <head>
+    <title #modal-title></title>
+    <link rel="stylesheet" href="./styles.css">
+    <script|module>
+      const {jsx, title} = Window.this.parameters;
+      document.$('#modal-content').patch(jsx);
+      document.$('#modal-title').patch(title);
+      document.$('#modal-content').close = () => Window.this.close();
+    </script>
+  </head>
+  <body.dark-mode>
+    <div #modal-content></div>
+  </body>
+</html>

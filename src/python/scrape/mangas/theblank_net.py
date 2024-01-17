@@ -12,23 +12,22 @@ class SiteScraper(ConfigureSiteScraper):
         super().useSession(url, session_dict);
         
     def getConfiguration(self, url):
-        prefix = 'https://reaperscans.com';
         return BasicConfiguration(
-            get_story_type = lambda node, sections: { 'comics': StoryType.MANGA, 'novels': StoryType.NOVEL }[sections[3]],
+            get_story_type = lambda node, sections: StoryType.MANGA,
             src = 'src',
-            get_title = lambda node: node.css_first('main nav div.hidden'),
-            get_chapter = lambda node, sections: { 'comics': node.css_first('main'), 'novels': node.css_first('main article') }[sections[3]],
+            get_title = lambda node: node.css_first('ol.breadcrumb li.active'),
+            get_chapter = lambda node, sections: node.css_first('.reading-content'),
             get_buttons = lambda node: self.Object(
-                prev = node.css_first('main nav div.flex:not(.justify-end) a'),
-                next = node.css('main nav div.flex.justify-end a')[1] if len(node.css('main nav div.flex.justify-end a')) > 2 else None,
+                prev = node.css_first('.nav-previous a.prev_page'),
+                next = node.css_first('.nav-next a.next_page'),
             ),
             get_urls = lambda buttons: self.Object(
-                prev = self.tryGetHref(buttons.prev, ''),
+                prev = self.tryGetHref(buttons.prev),
                 current = url,
-                next = self.tryGetHref(buttons.next, ''),
+                next = self.tryGetHref(buttons.next),
             ),
             get_keys = lambda node, sections: self.Object(
                 story = sections[4],
-                chapter = sections[6],
+                chapter = sections[5],
             ),
         );

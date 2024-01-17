@@ -7,9 +7,9 @@ from scrape.configure_site_scraper import ConfigureSiteScraper;
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
-        # super().useDriver(url, driver);
+        super().useDriver(url, driver, '.read-content');
         # super().useReDriver(url, driver);
-        super().useSession(url, session_dict);
+        # super().useSession(url, session_dict);
         
     def getConfiguration(self, url):
         prefix = 'https://manga18fx.com';

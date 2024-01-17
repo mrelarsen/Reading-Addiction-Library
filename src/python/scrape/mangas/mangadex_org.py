@@ -1,5 +1,6 @@
 import json
-import requests;
+import requests
+from scrape.basic_scraper import BasicScraper;
 from models.scraper_result import ScraperResult
 from models.story_type import StoryType
 from models.driver import Driver
@@ -33,11 +34,29 @@ class SiteScraper(ConfigureSiteScraper):
         
         relationships = self.walk(chapter_info_content, 'data.relationships');
         attributes = self.walk(chapter_info_content, 'data.attributes');
-        manga_uuid = next(x for x in relationships if x['type'] == 'manga')['id'];
-        group_uuid = next(x for x in relationships if x['type'] == 'scanlation_group')['id'];
+        # print(json.dumps(relationships));
+        manga_uuid = next((x for x in relationships if x['type'] == 'manga'), { 'id': None })['id'];
+        group_uuid = next((x for x in relationships if x['type'] == 'scanlation_group'), { 'id': None })['id'];
+        user_uuid = next((x for x in relationships if x['type'] == 'user'), { 'id': None })['id'];
+        if not manga_uuid:
+            self._result = BasicScraper._get_default_tts(
+                texts = ['Manga could not be found!', 'Url:', url],
+                title = 'Manga could not be found while parsing the url!',
+                url = url,
+                loading=False);
+            return;
+        creator_uuid = group_uuid or user_uuid;
+        if not creator_uuid:
+            self._result = BasicScraper._get_default_tts(
+                texts = ['Manga creator could not be found!', 'Url:', url],
+                title = 'Manga creator could not be found while parsing the url!',
+                url = url,
+                loading=False);
+            return;
 
-
-        story_url = f"https://api.mangadex.org/manga/{manga_uuid}/aggregate?translatedLanguage[]=en&groups[]={group_uuid}";
+        story_url = f"https://api.mangadex.org/manga/{manga_uuid}/aggregate?translatedLanguage[]={attributes['translatedLanguage'] or 'en'}&groups[]={group_uuid}";
+        if not group_uuid:
+            story_url = f"https://api.mangadex.org/manga/{manga_uuid}/aggregate?translatedLanguage[]={attributes['translatedLanguage'] or 'en'}";
         story_content = self._try_get_json(story_url, self._session);
         volumes = self.walk(story_content, 'volumes');
         chapters = [];
@@ -73,18 +92,6 @@ class SiteScraper(ConfigureSiteScraper):
         if len(bits) < 2:
             return bits[0].zfill(n);
         return "%s.%s" % (bits[0].zfill(n), bits[1])
-        
-    def setupSession(self, url: str, session_dict: dict[str, requests.Session]):
-        sections = url.split('/');
-        base_url = "/".join(sections[:3]);
-        domainSections = sections[2].split('.');
-        if domainSections[0] == 'www':
-            domainSections = domainSections[1:];
-        site_key = '_'.join(domainSections);
-        if not session_dict.get(site_key):
-            session_dict[site_key] = requests.Session();
-            session_dict[site_key].post(base_url, headers=self.headers)
-        return site_key;
 
     def getVolumeChapterIndeces(self, volumes, chapter_uuid):
         for v_index, (v_key, volume) in enumerate(volumes.items()):

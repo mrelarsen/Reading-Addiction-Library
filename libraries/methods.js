@@ -2,7 +2,7 @@ globalThis.appendOn = appendOn;
 globalThis.replaceLast = replaceLast;
 globalThis.replaceId = replaceId;
 globalThis.scrollTo = scrollTo;
-globalThis.scrollToIn = scrollToIn;
+globalThis.scrollToCenterOf = scrollToCenterOf;
 globalThis.onClick = onClick;
 globalThis.loadToggle = loadAndCallToggle;
 
@@ -38,23 +38,31 @@ export function scrollTo(selector, behavior = "smooth", block = "start") {
   });
 }
 
-export function scrollToIn(
-  containerSelector,
-  elementSelector,
-  behavior = "smooth",
-  block = "start"
+export function scrollToCenterOf(
+  selector,
+  from = 0.5,
+  to = 0.5,
+  elementOffset = 0.5
 ) {
-  const element = document.$(elementSelector);
-  const container = document.$(containerSelector);
-  // const container = element.parentNode;
-  console.log(
-    "container",
-    container.scrollHeight,
-    container.offsetTop,
-    container.clientTop
-  );
-  console.log("element", element.offsetTop, element.clientTop);
-  container.scrollTo(0, -element.offsetTop, false, true);
+  const element = document.$(selector);
+  const main = element.$p(".scroll-parent");
+  const elementBox = element.box("border", main); // Rect, relative to main
+  const posRelToMain = elementBox.origin; // Point
+  const posInMainContent = posRelToMain + main.scrollPosition; // the above, adjusted to main content
+  const mainSize = main.box("client").size;
+  const mainPosition = main.scrollPosition; // the above, adjusted to main content
+  const fromPosition =
+    posInMainContent - mainSize * from + elementBox.size * elementOffset;
+  const currentPosition = mainPosition + elementBox.size * elementOffset;
+  const toPosition =
+    posInMainContent - mainSize * to + elementBox.size * elementOffset;
+  if (currentPosition.y < fromPosition.y || currentPosition.y > toPosition.y) {
+    main.scrollTo({
+      left: toPosition.x,
+      top: toPosition.y,
+      behavior: "smooth",
+    });
+  }
 }
 
 export function showProps(obj, objName) {

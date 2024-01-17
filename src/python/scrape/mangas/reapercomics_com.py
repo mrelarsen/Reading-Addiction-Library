@@ -12,7 +12,6 @@ class SiteScraper(ConfigureSiteScraper):
         super().useSession(url, session_dict);
         
     def getConfiguration(self, url):
-        prefix = 'https://reaperscans.com';
         return BasicConfiguration(
             get_story_type = lambda node, sections: { 'comics': StoryType.MANGA, 'novels': StoryType.NOVEL }[sections[3]],
             src = 'src',
@@ -23,9 +22,9 @@ class SiteScraper(ConfigureSiteScraper):
                 next = node.css('main nav div.flex.justify-end a')[1] if len(node.css('main nav div.flex.justify-end a')) > 2 else None,
             ),
             get_urls = lambda buttons: self.Object(
-                prev = self.tryGetHref(buttons.prev, ''),
+                prev = self.tryGetHref(buttons.prev),
                 current = url,
-                next = self.tryGetHref(buttons.next, ''),
+                next = self.tryGetHref(buttons.next),
             ),
             get_keys = lambda node, sections: self.Object(
                 story = sections[4],

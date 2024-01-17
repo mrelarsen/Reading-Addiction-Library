@@ -103,8 +103,10 @@ class TTSReader():
         self.__t.start();
 
     def download_async(self, text, file):
+        print(f'"{text[:10]}"', file)
         self.__engine.save_to_file(text, file);
         self.__engine.runAndWait();
+        print('completed download of', file.split('\\')[-1])
     
     def read(self, lines = None, force = False, update_callback = None, completed_callback = None):
         if not lines or len(lines) == 0: return;

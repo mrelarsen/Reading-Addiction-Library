@@ -51,6 +51,7 @@ body {
 /* Page content */
 .content {
   margin-top: 0;
+  line-height: 1.3em;
   width: *;
   height: *;
 }
@@ -126,12 +127,24 @@ select.dark {
   color: rgb(210, 210, 210);
   padding: 0px 6px;
 }
-option.dark {
-  background: linear-gradient(
+select.dark option:not(:checked),
+option.dark:not(:checked) {
+  /* background: linear-gradient(
     to bottom,
     rgb(70, 70, 70) 5%,
     rgb(70, 70, 70) 100%
-  );
+  ); */
+  background-color: lightgray;
+  color: rgb(210, 210, 210);
+}
+select.dark option:checked,
+option.dark:checked {
+  /* background: linear-gradient(
+    to bottom,
+    rgb(70, 70, 70) 5%,
+    rgb(70, 70, 70) 100%
+  ); */
+  background-color: gray;
   color: rgb(210, 210, 210);
 }
 richtext.dark {

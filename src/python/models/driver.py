@@ -34,7 +34,7 @@ class Driver():
         self.toggle(True, is_async, callback);
 
     def toggle(self, on = True, is_async=True, callback = None):
-        if exists("./geckodriver.exe") and on and not self.__driver and not self.__starting:
+        if exists("../../libraries/geckodriver/geckodriver.exe") and on and not self.__driver and not self.__starting:
             self.__starting = True;
             if is_async:
                 t = threading.Thread(target=self.__toggle_driver, args=(callback,), daemon=True);
@@ -49,7 +49,7 @@ class Driver():
         self.__call_javascript('toggleLoadBar', [True]);
         firefox_options = webdriver.FirefoxOptions();
         firefox_options.headless = True;
-        service = FirefoxService(executable_path="./libraries/geckodriver/geckodriver.exe")
+        service = FirefoxService(executable_path="../../libraries/geckodriver/geckodriver.exe")
         self.__driver = webdriver.Firefox(service=service, options=firefox_options)
         self.__starting = False;
         self.__call_javascript('toggleLoadBar', [False]);

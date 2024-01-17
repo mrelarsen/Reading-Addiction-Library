@@ -8,7 +8,7 @@ export class VirtualTable extends Element {
   onRowClick;
   hideSettings = false;
   toolbar = [];
-  filterMap = {};
+  filterMap;
   excludeMap = {};
   modal;
   sortOrder;
@@ -21,14 +21,17 @@ export class VirtualTable extends Element {
     this.onRowClick = props.onRowClick;
     this.hideSettings = props.hideSettings;
     this.toolbar = props.toolbar || [];
-    Object.entries(this.columnMetadata).forEach((x) => {
-      if (typeof x[1].filter === "string") {
-        this.filterMap[x[0]] = x[1].filter;
-      }
-      if (typeof x[1].exclude === "string") {
-        this.excludeMap[x[0]] = x[1].exclude;
-      }
-    });
+    if (!this.filterMap) {
+      this.filterMap = {};
+      Object.entries(this.columnMetadata).forEach((x) => {
+        if (typeof x[1].filter === "string") {
+          this.filterMap[x[0]] = x[1].filter;
+        }
+        if (typeof x[1].exclude === "string") {
+          this.excludeMap[x[0]] = x[1].exclude;
+        }
+      });
+    }
     this.list = this.data; // render full list initially
   }
 

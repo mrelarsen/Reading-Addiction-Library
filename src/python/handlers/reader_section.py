@@ -1,7 +1,7 @@
 import html as htmlParser;
 import importlib
 import json;
-import os;
+import os
 import pyperclip as pc;
 import re;
 import sciter;
@@ -11,7 +11,8 @@ from models.driver import Driver
 from models.reading_status import ReadingStatus
 from models.story_type import StoryType;
 from selectolax.parser import HTMLParser, Node
-from scrape.basic_scraper import BasicScraper, ScraperResult;
+from scripts.text_helper import TextHelper;
+from scrape.basic_scraper import ScraperResult;
 from scripts.scrape_service import ScrapeService
 from scripts.tts_reader import TTSReader
 from time import sleep
@@ -22,7 +23,7 @@ if cssutils_spec:
     from cssutils import CSSParser
 
 class ReaderEventHandler():
-    def __init__(self, el, history: History, call_javascript: Callable[[str, list[Any]], None], driver: Driver):
+    def __init__(self, el: sciter.dom.Element, history: History, call_javascript: Callable[[str, list[Any]], None], driver: Driver):
         settings = self.load_settings();
         self.element=el;
         self.history = history;
@@ -39,10 +40,12 @@ class ReaderEventHandler():
         self.line_number = 0;
         self.call_javascript = call_javascript;
         self.text_size = settings and settings.get('text_size') or 1;
+        self.parser = None;
         if cssutils_spec:
             self.parser = CSSParser();
         pass
     
+
     @sciter.script('save_settings')
     def save_settings(self, settings: dict):
         json_string = json.dumps({
@@ -84,7 +87,7 @@ class ReaderEventHandler():
 
     @sciter.script('read_list')
     def read_list(self, text):
-        urllist = [x for x in re.split(r'[\s,]', text) if x];
+        urllist = [x for x in re.split(r'[\s,]', text) if x and (x.startswith('http') or x.startswith('file'))];
         print(urllist)
         self.read(urllist=urllist);
         pass
@@ -103,7 +106,7 @@ class ReaderEventHandler():
         for i in range(len(urllist)):
             result = self.download_chapter(urllist[i]);
             counter = 1;
-            while result.urls.next and counter < amount:
+            while result and result.urls.next and counter < amount:
                 result = self.download_chapter(result.urls.next);
                 counter += 1;
         print('Done downloading!');
@@ -111,40 +114,46 @@ class ReaderEventHandler():
     def download_chapter(self, url):
         _, result = self.scrape_service.read_info(url=url, buffer=False, loading=False);
         while result.is_loading():
-            sleep(0.2);
+            sleep(0.5);
             _, result = self.scrape_service.read_info(url=url, buffer=False, loading=False);
         sections = [x for x in re.split(r'[/.-]', result.keys.story) if x];
         abbreviation = "".join(map(lambda x: x[0], sections)) if len(sections) > 1 else result.keys.story;
-        self.tts_reader.download(text=result.chapter.text(deep=True), save_path='downloads/wavs/', file_name=f'{abbreviation}-{result.keys.chapter}');
-        self.scrape_service.try_to_save(ReadingStatus.DOWNLOADED);
+        chapter_id = self.scrape_service.try_to_save(ReadingStatus.DOWNLOADED);
+        title = "-".join(x for x in re.split(r'[\s/.,:-]', result.title) if x);
+        text = result.chapter.text(deep=True, strip=True);
+        self.tts_reader.download(text=text, save_path='downloads/wavs/', file_name=f'{abbreviation}-{chapter_id}-{title}');
         return result;
+        # self.tts_reader.download(text=pc.paste(), save_path='downloads/wavs/', file_name=f'hello');
 
     @sciter.script('read')
     def read(self, dir = 0, force = False, urllist = None):
         story_type, result = self.scrape_service.read_info(dir=dir, urllist=urllist);
         if story_type == StoryType.NOVEL:
+            print('novel')
             self.read_tts(result=result, force=force);
         elif story_type == StoryType.MANGA:
+            print('manga')
             self.read_manga(result=result);
         else:
             print('Url not found or wrong format!');
 
     def read_tts(self, result: ScraperResult, force):
-        self.clean_html(result);
+        TextHelper.clean_html(result, self.parser);
         lines = [];
         for idx, line in enumerate(result.lines):
             line_with_bib = self.parse_asterixes(line.text());
             lines.append(line_with_bib);
         self.setup_chapter(result);
         self.tts_reader.read(lines=lines, force=force, update_callback=self.update_text_view, completed_callback=self.on_read_completion)
-        story, key = self.scrape_service.get_story();
         self.element.find_first('#rdr_lbl_title').text = result.title;
-        if story:
-            self.element.find_first('#rdr_lbl_story_title').text = story and story.get('name') or key;
+        if result.domain:
+            story, key = self.scrape_service.get_story();
+            if story:
+                self.element.find_first('#rdr_lbl_story_title').text = story and story.get('name') or key;
+            self.set_urls();
+            self.scrape_service.try_to_save(ReadingStatus.READING);
         self.lineNumber = 0;
         self.scroll();
-        self.set_urls();
-        self.scrape_service.try_to_save(ReadingStatus.READING);
     
     def parse_asterixes(self, text:str):
         return re.sub(r'([*])\1+', lambda match: 'beep' + match.group()[4:] if len(match.group()) > 3 else match.group(), text);
@@ -174,20 +183,11 @@ class ReaderEventHandler():
         if self.auto_continuation:
             self.read(dir=1, force=True);
 
-    def clean_html(self, result: ScraperResult):
-        self.clean_text(result.chapter);
-        result.chapter.unwrap_tags(['element']);
-        lines = BasicScraper.get_lines(result.chapter);
-        result.lines = lines;
-
-    def setup_chapter(self, result):
+    def setup_chapter(self, result: ScraperResult):
         self.chapter = {};
         self.append_numeric_lines(result);
-        self.set_overflow_visible(result.chapter);
-        self.change_links(result.chapter);
-        self.remove_scripts(result.chapter);
-        self.remove_ads(result.chapter);
-        self.remove_json(result.chapter);
+        TextHelper.setup_chapter(result, self.parser);
+        # print(result.chapter.html);
         self.call_javascript('replaceId', ['rdr_content', result.chapter.html]);
         self.line_number = 0;
 
@@ -197,12 +197,30 @@ class ReaderEventHandler():
         for line in lines:
             line.remove();
         print(forprint.html);
+
+    def get_children(self, node: Node) -> list[Node]:
+        children = [];
+        child = node.child;
+        while child:
+            children.append(child);
+            child = child.next;
+        return children;
     
     def append_numeric_lines(self, result: ScraperResult):
         if result.chapter:
             for idx, line in enumerate(result.lines):
                 if not line.parent:
                     print(f'line {idx}: has no parent, {str(line)}');
+                    continue;
+                if line.tag not in ['em', 'strong', 'small', 'b', 'big', 'span', '-text']:
+                    children = self.get_children(line);
+                    innerContent = "".join(x.html for x in children);
+                    span = HTMLParser(f'<span id="{f"line-{idx:05}"}" class="line" title="{f"line-{idx:05}"}">{innerContent}</span>').body.child;
+                    if line.last_child:
+                        line.last_child.insert_after(span);
+                        for child in children:
+                            child.remove();
+                    self.chapter[f"{idx:05}"] = span;
                     continue;
                 content = line.html
                 span = HTMLParser(f'<span id="{f"line-{idx:05}"}" class="line" title="{f"line-{idx:05}"}">{content}</span>').body.child;
@@ -217,58 +235,6 @@ class ReaderEventHandler():
             while chapterChild:
                 self.chapter[span['id'][5:]] = span;
                 chapterChild = chapterChild.next;
-    
-    def change_links(self, node: Node):
-        links = node.css('a');
-        for link in links:
-            if 'href' in link.attributes:
-                href = link.attributes['href'];
-                link.attrs['href'] = 'javascript:void(0)';
-                link.attrs['link'] = href;
-    
-    def remove_scripts(self, node: Node):
-        scripts = node.css('script');
-        for script in scripts:
-            script.remove();
-    
-    def remove_json(self, node: Node):
-        scripts = node.css('script');
-        for script in scripts:
-            script.remove();
-    
-    def remove_ads(self, node: Node):
-        scripts = node.css('.adsbygoogle') + node.css('.google-auto-placed') + node.css('.ads');
-        for script in scripts:
-            script.remove();
-    
-    def change_imgs(self, node: Node):
-        imgs = node.css('img');
-        for img in imgs:
-            img_div = HTMLParser(f'<div style="width:*;"><img style="max-width: 50%; display: block; margin-left: auto; margin-right: auto;"></div>').body.child;
-            image = img_div.child;
-            if img.attributes.get('src'):
-                image.attrs['src'] = img.attributes['src'];
-                image.attrs['title'] = img.attributes['src'];
-            if img.attributes.get('data-src'):
-                image.attrs['src'] = img.attributes['data-src'];
-                image.attrs['title'] = img.attributes['data-src'];
-            img.insert_after(img_div);
-            img.remove();
-
-    def set_overflow_visible(self, node: Node):
-        tds = node.css('div,td');
-        for td in tds:
-            if 'style' in td.attributes:
-                if cssutils_spec:
-                    sheet = self.parser.parseStyle(td.attributes['style']);
-                    if sheet.overflow:
-                        sheet.overflow = 'visible';
-                    if sheet.getProperty('max-width'):
-                        print('has max-width', td);
-                        sheet.removeProperty('max-width');
-                else:
-                    td.attrs['style'] = td.attributes['style'].replace('overflow: hidden', 'overflow: visible').replace('overflow: auto', 'overflow: visible').replace('overflow:hidden', 'overflow: visible').replace('overflow:auto', 'overflow: visible');
-
     def skip_line(self):
         count = self.tts_reader.skip_line() - 1;
         currentLine = self.chapter[f"{count:05}"].text();
@@ -294,71 +260,6 @@ class ReaderEventHandler():
     def paste_html(self):
         text = pc.paste();
         return text;
-
-    def get_children(self, node: Node):
-        children = [];
-        child = node.child;
-        while child:
-            children.append(child);
-            child = child.next;
-        return children;
-
-    def clean_text(self, node: Node, depth = 0, pad = False):
-        text = node.text(strip=True);
-        if node.tag != '-text':
-            # remove display style in case of inline tags
-            if node.tag == 'img' and node.parent.text(strip=True) == '' and node.parent.tag in ['em', 'strong', 'small', 'b', 'big']:
-                if 'style' in node.attributes and cssutils_spec:
-                    sheet = self.parser.parseStyle(node.attributes['style']);
-                    if sheet.getProperty('display'):
-                        sheet.removeProperty('display');
-                    node.attrs['style'] = sheet.cssText;
-
-            padding = node.tag in ['em', 'strong', 'small', 'b', 'big'];
-            children = self.get_children(node);
-            for child in children:
-                self.clean_text(child, depth + 1, padding);
-        elif text.strip() != "" and node.parent != None:
-            html = node.html.strip();
-            if html[0] == '{' or html[0] == '[':
-                if self.is_json(html):
-                    print(f'Remove tag with json');
-                    node.remove();
-                    return;
-            html = self.remove_disruptive_symbols(html);
-            html = self.parse_linebreak(html);
-            html = self.parse_other_whitespaces(html);
-            html = self.parse_max_5_consecutive_chars(html);
-            if pad:
-                next_node = HTMLParser(f'<element>&nbsp;{html}&nbsp;</element>').body.child;
-            else:
-                next_node = HTMLParser(f'<element>{html}</element>').body.child;
-            node.insert_after(next_node);
-            node.remove();
-        else:
-            node.remove();
-        node.unwrap_tags(['element']);
-        
-    def is_json(self, text):
-        try:
-            json.loads(text)
-        except ValueError as e:
-            return False
-        return True
-
-    def remove_disruptive_symbols(self, text:str):
-        text = htmlParser.escape(htmlParser.unescape(text));
-        return text;
-
-    def parse_linebreak(self, text:str):
-        content = [x.strip() for x in re.split(r'\n', text) if x.strip()];
-        return content[0] if len(content) == 1 else ''.join([f'<div>{x}</div>' for x in content]);
-
-    def parse_other_whitespaces(self, text:str):
-        return ' '.join([x.strip() for x in re.split(r'[\s\u200b\u200c\ufeff]', text) if x.strip()]);
-
-    def parse_max_5_consecutive_chars(self, text:str):
-        return re.sub(r'([^*])\1+', lambda match: match.group()[:5] if len(match.group()) > 5 else match.group(), text);
 
     @sciter.script('read_paste')
     def read_paste(self):
@@ -394,6 +295,11 @@ class ReaderEventHandler():
     @sciter.script('copy_text')
     def copy_text(self, text):
         pc.copy(text);
+        return sciter.Value.null();
+
+    @sciter.script('copy_content')
+    def copy_content(self):
+        pc.copy(self.scrape_service.result);
         return sciter.Value.null();
 
     @sciter.script('open_link')   
@@ -437,7 +343,10 @@ class ReaderEventHandler():
         if not f"{self.line_number:05}" in self.chapter:
             print(f'chapter does not have {self.line_number:05}');
             return;
-        current_line = htmlParser.unescape(self.chapter[f"{self.line_number:05}"].html);
+        current_node = self.chapter[f"{self.line_number:05}"];
+        # copy_node = HTMLParser(current_node.html).body.child;
+        # copy_node.unwrap_tags(['em', 'strong', 'small', 'b', 'big']);
+        current_line = htmlParser.unescape(current_node.html);
         if not length and (completed != None):
             self.call_javascript('replaceId', [f"line-{self.line_number:05}", self.chapter[f"{self.line_number:05}"].html]);
             return;
@@ -462,11 +371,11 @@ class ReaderEventHandler():
             self.scroll();
 
     def add_content(self, text):
-        self.line = f'{self.get_linePrefix()}{text}</div>';
+        self.line = f'{self.get_line_prefix()}{text}</div>';
         self.call_javascript('appendOn', ['#rdr_content', self.line]);
     
     def scroll(self):
-        self.call_javascript('scrollTo', [f'#line-{self.line_number:05}', 'smooth', 'center']);
+        self.call_javascript('scrollToCenterOf', [f'#line-{self.line_number:05}']);
 
     def get_line_prefix(self):
         return f'<span id="line-{self.line_number:05}" class="line" title="line-{self.line_number:05}">';

@@ -2,6 +2,7 @@ import importlib
 import re
 import requests
 import threading
+import time;
 from models.driver import Driver;
 from queue import Queue
 from scrape.basic_scraper import BasicScraper, ScraperResult;
@@ -47,8 +48,12 @@ class ScrapeHandler():
             self.results[task.url] = BasicScraper._get_waiting(task.url, task.url);
             self.loadings[task.url] = self.results[task.url];
         elif task.url in self.loadings:
+            print ('redo loading')
             loading = BasicScraper._get_waiting(task.url, task.url);
-            self.loadings[task.url].__dict__.update(loading.__dict__);
+            self.loadings[task.url].chapter = loading.chapter,
+            self.loadings[task.url].lines = loading.lines,
+            self.loadings[task.url].counter += 1;
+            print(self.results[task.url].counter)
 
         if self.queue.maxsize * 0.5 > self.queue.qsize():
             self.queue.put(task);
@@ -63,6 +68,8 @@ class QueueWorker():
         self.session_dict: dict[str, requests.Session] = {};
         self.modules = {};
         self.main_thread: threading.Thread = None;
+        self.previous_url = None;
+        self.a = 0;
         pass
 
     def start_if_stopped(self):
@@ -72,17 +79,23 @@ class QueueWorker():
 
     def run_tasks(self):
         while not self.queue.empty():
-            self.run_task(self.queue.get());
+            task = self.queue.get();
+            if task.url == self.previous_url:
+                time.sleep(0.5)
+            self.previous_url = task.url;
+            self.run_task(task);
 
     def run_task(self, task: WorkerTask):
         if not task or not task.url:
             return;
     
         if not self.is_driver_ready(self.results[task.url]):
-            print(f'start driver for task: {task.url}')
-            self.driver.start_if_required(self.results[task.url], False);
-            print(f'Driver started')
-            self.queue.put(task);
+            if not self.driver.is_starting() and self.results[task.url].loading and self.results[task.url].counter == 1:
+                print(f'start driver for task: {task.url}')
+                self.driver.start_if_required(self.results[task.url], False);
+                print(f'Driver started')
+            if self.results[task.url].counter < 20:
+                self.queue.put(task);
             return;
 
         modulename, alt_url = self.__get_module_name(task.url);

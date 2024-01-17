@@ -1,6 +1,6 @@
 import os
 import threading
-from typing import Any, Callable, Optional;
+from typing import Any, Callable, Optional, Union;
 import requests;
 from io import BytesIO
 from PIL import Image;
@@ -12,7 +12,7 @@ from models.joke import Joke;
 from selenium.webdriver.remote.webdriver import WebDriver
 
 class BasicConfiguration():
-    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_title: Callable[[Node], Node], get_buttons: Callable[[Node], Any], get_urls: Callable[[Any], Any], get_keys: Callable[[Node, list[str]], Any], get_chapter: Callable[[Node, list[str]], Node] = None, src: str =None):
+    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_title: Callable[[Node], Node], get_buttons: Callable[[Node], Any], get_urls: Callable[[Any], Any], get_keys: Callable[[Node, list[str]], Any], get_chapter: Callable[[Node, list[str]], Node] = None, src: Union[str, Callable[[Node], str]] = None):
         self.get_story_type = get_story_type;
         self.src = src; # manga
         self.get_chapter = get_chapter; # tts
@@ -49,10 +49,21 @@ class BasicScraper():
     def get_result(self, domain=None) -> ScraperResult:
         return self._result.get_with_domain(domain);
 
+    def get_children(node: Node):
+        children = [];
+        child = node.child;
+        while child:
+            children.append(child);
+            child = child.next;
+        return children;
+
     @staticmethod
     def get_lines(node: Node, depth = 0):
         text = node.text(strip=True)
         if node.tag != '-text':
+            # children = BasicScraper.get_children(node);
+            # if len(children) > 0 and all(x.tag in ['em', 'strong', 'small', 'b', 'big', 'span', '-text'] for x in children):
+            #     return [node];
             childLines = []
             child = node.child;
             while child:
@@ -63,10 +74,12 @@ class BasicScraper():
             return [node];
         return []
 
-    def _get_images_from_tags(self, img_tags=[], src='src'):
+    def _get_images_from_tags(self, img_tags:list[Node]=[], src='src'):
         img_urls = [];
         for img_tag in img_tags:
-            if src in img_tag.attributes:
+            if callable(src):
+                img_urls.append(src(img_tag));
+            elif src in img_tag.attributes and img_tag.attributes[src]:
                 img_urls.append(img_tag.attributes[src]);
         return self._get_images(img_urls);
 
@@ -117,13 +130,16 @@ class BasicScraper():
             if not response or not response.ok: 
                 continue;
             img_file = response.content
-            success = self._extract_image(images, img_file, ext);
+            img_type = response.headers["Content-Type"].split("/")[-1];
+            if img_type == 'error':
+                continue;
+            success = self._extract_image(images, img_file, img_type);
             if success:
                 break;
 
     def _extract_image(self, images: list, img_file, ext) -> bool:
         try:
-            url_img = Image.open(img_file if isinstance(img_file, str) else BytesIO(img_file))
+            url_img = Image.open(img_file if isinstance(img_file, str) else BytesIO(img_file)).convert('RGB')
             url_img_width, url_img_height = url_img.size;
             parts = ceil(url_img_height / 10000);
             for partIndex in range(parts):
@@ -131,7 +147,7 @@ class BasicScraper():
                 part_height = (url_img_height % 10000 if partIndex == parts - 1 else 10000) or 10000;
                 cropped_url_img = url_img.crop((0, startY, url_img_width, startY + part_height));
                 img_byte_arr = BytesIO();
-                _ext = ext.upper()[1:];
+                _ext = ext.upper().replace('.', '');
                 cropped_url_img.save(img_byte_arr, format='JPEG' if _ext == 'JPG' else _ext);
                 images.append(img_byte_arr.getvalue());
             return True;

@@ -46,8 +46,8 @@ class ScrapeService():
 
     def try_to_save(self, status=ReadingStatus.COMPLETED):
         if self.history and self.result and self.result.keys and self.result.keys.story and self.result.keys.chapter and self.result.domain:
-            self.history.add_chapter(self.result.urls.current, self.result, self.result.domain, status);
-        pass
+            return self.history.add_chapter(self.result.urls.current, self.result, self.result.domain, status);
+        return None;
         
     def get_urls(self):
         task = self.result and WorkerTask(self.result.urls.current, self.urllist);

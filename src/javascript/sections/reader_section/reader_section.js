@@ -1,5 +1,8 @@
 import { Remarkable } from "../../../../libraries/remarkable/index.js";
 import { HeaderIds } from "../../../../libraries/remarkable/plugins/header-ids.js";
+import { ReadUrlsModal } from "../../jsx-modals/read_urls_modal/read_urls_modal.js";
+import { DownloadUrlsModal } from "../../jsx-modals/download_urls_modal/download_urls_modal.js";
+import { ReaderSettingsModal } from "../../jsx-modals/reader_settings_modal/reader_settings_modal.js";
 
 var reader = document.$("#reader_section");
 var reader_text_modifier = 1;
@@ -11,6 +14,7 @@ globalThis.replaceManga = (images) => replaceManga(images);
 
 let settings;
 let urlDict = {};
+const useJSX = false;
 
 document.ready = () => {
   const urls = callReader("get_urls");
@@ -98,14 +102,30 @@ onClick([
   [
     "#rdr_btn_download",
     () => {
-      Window.this.modal({
-        url:
-          __DIR__ + "../../modals/download_urls_modal/download_urls_modal.htm",
-        alignment: -5,
-        width: 400,
-        height: 350,
-        parameters: { callReader: callReader },
-      });
+      if (useJSX) {
+        Window.this.modal({
+          url: __DIR__ + "../../jsx-modals/basic_modal/basic_modal.htm",
+          alignment: -5,
+          width: 400,
+          height: 350,
+          parameters: {
+            jsx: (
+              <DownloadUrlsModal callReader={callReader}></DownloadUrlsModal>
+            ),
+            title: "Download wavs from urls",
+          },
+        });
+      } else {
+        Window.this.modal({
+          url:
+            __DIR__ +
+            "../../modals/download_urls_modal/download_urls_modal.htm",
+          alignment: -5,
+          width: 400,
+          height: 350,
+          parameters: { callReader: callReader },
+        });
+      }
     },
   ],
   [
@@ -114,35 +134,73 @@ onClick([
   ],
   [
     "#rdr_btn_read",
-    () =>
-      Window.this.modal({
-        url: __DIR__ + "../../modals/read_urls_modal/read_urls_modal.htm",
-        alignment: -5,
-        width: 400,
-        height: 350,
-        parameters: {
-          text: urlDict["list"]?.join(" ") || urlDict["current"],
-          callReader: callReader,
-        },
-      }),
+    () => {
+      if (useJSX) {
+        Window.this.modal({
+          url: __DIR__ + "../../jsx-modals/basic_modal/basic_modal.htm",
+          alignment: -5,
+          width: 400,
+          height: 350,
+          parameters: {
+            jsx: (
+              <ReadUrlsModal
+                callReader={callReader}
+                text={urlDict["list"]?.join(" ") || urlDict["current"]}
+              ></ReadUrlsModal>
+            ),
+            title: "Read content of urls",
+          },
+        });
+      } else {
+        Window.this.modal({
+          url: __DIR__ + "../../modals/read_urls_modal/read_urls_modal.htm",
+          alignment: -5,
+          width: 400,
+          height: 350,
+          parameters: {
+            text: urlDict["list"]?.join(" ") || urlDict["current"],
+            callReader: callReader,
+          },
+        });
+      }
+    },
   ],
   [
     "#rdr_btn_settings",
     () => {
       if (!settings) settings = callReader("get_settings");
-      Window.this.modal({
-        url:
-          __DIR__ +
-          "../../modals/reader_settings_modal/reader_settings_modal.htm",
-        alignment: -5,
-        width: 400,
-        height: 350,
-        parameters: {
-          callReader: callReader,
-          changeClass: changeClass,
-          settings: settings,
-        },
-      });
+      if (useJSX) {
+        Window.this.modal({
+          url: __DIR__ + "../../jsx-modals/basic_modal/basic_modal.htm",
+          alignment: -5,
+          width: 400,
+          height: 350,
+          parameters: {
+            jsx: (
+              <ReaderSettingsModal
+                callReader={callReader}
+                changeClass={changeClass}
+                settings={settings}
+              ></ReaderSettingsModal>
+            ),
+            title: "Settings",
+          },
+        });
+      } else {
+        Window.this.modal({
+          url:
+            __DIR__ +
+            "../../modals/reader_settings_modal/reader_settings_modal.htm",
+          alignment: -5,
+          width: 400,
+          height: 350,
+          parameters: {
+            callReader: callReader,
+            changeClass: changeClass,
+            settings: settings,
+          },
+        });
+      }
     },
   ],
   ["#rdr_btn_paste", () => callReader("read_paste")],

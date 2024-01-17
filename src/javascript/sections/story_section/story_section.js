@@ -1,6 +1,9 @@
 import { VirtualTable } from "../../../../libraries/virtual-list/virtual_table.js";
 import { storyColumnMetadata } from "./metadata/story_column_metadata.js";
 import { chapterColumnMetadata } from "./metadata/chapter_column_metadata.js";
+import { MergeStoriesModal } from "../../jsx-modals/merge_stories_modal/merge_stories_modal.js";
+import { EditStoryModal } from "../../jsx-modals/edit_story_modal/edit_story_modal.js";
+import { EditChapterModal } from "../../jsx-modals/edit_chapter_modal/edit_chapter_modal.js";
 
 var stories = document.$("#story_section");
 
@@ -26,6 +29,8 @@ var editStoryBtn;
 var mergeStoryBtn;
 var editChapterBtn;
 
+var useJSX = false;
+
 document.on("click", "#sts_btn_query_all", () => {
   const stories = callStory("get_stories");
   setStories(stories);
@@ -45,48 +50,129 @@ document.on("click", "#mrg_btn_file", () => {
 });
 
 function mergeStories() {
-  Window.this.modal({
-    url: __DIR__ + "../../modals/merge_stories_modal/merge_stories_modal.htm",
-    alignment: -5,
-    width: 400,
-    height: 350,
-    parameters: {
-      callStory: callStory,
-      stories: selectedStories,
-      storyPicker: storyPicker,
-    },
-  });
+  if (useJSX) {
+    Window.this.modal({
+      url: __DIR__ + "../../jsx-modals/basic_modal/basic_modal.htm",
+      alignment: -5,
+      width: 400,
+      height: 350,
+      parameters: {
+        jsx: (
+          <MergeStoriesModal
+            callStory={callStory}
+            stories={selectedStories}
+            storyPicker={storyPicker}
+          ></MergeStoriesModal>
+        ),
+        title: "Merge stories",
+      },
+    });
+  } else {
+    Window.this.modal({
+      url: __DIR__ + "../../modals/merge_stories_modal/merge_stories_modal.htm",
+      alignment: -5,
+      width: 400,
+      height: 350,
+      parameters: {
+        callStory: callStory,
+        stories: selectedStories,
+        storyPicker: storyPicker,
+      },
+    });
+  }
 }
 
 function editStory() {
-  Window.this.modal({
-    url: __DIR__ + "../../modals/edit_story_modal/edit_story_modal.htm",
-    alignment: -5,
-    width: 400,
-    height: 350,
-    parameters: {
-      callStory: callStory,
-      storyPicker: storyPicker,
-      storyId: storyId,
-      storyRow: storyRow,
-      storyRowElement: storyRowElement,
-    },
-  });
+  if (useJSX) {
+    Window.this.modal({
+      url: __DIR__ + "../../jsx-modals/basic_modal/basic_modal.htm",
+      alignment: -5,
+      width: 400,
+      height: 350,
+      parameters: {
+        jsx: (
+          <EditStoryModal
+            callStory={callStory}
+            storyId={storyId}
+            storyRow={storyRow}
+            storyRowElement={storyRowElement}
+            storyPicker={storyPicker}
+          ></EditStoryModal>
+        ),
+        title: "Edit story",
+      },
+    });
+  } else {
+    Window.this.modal({
+      url: __DIR__ + "../../modals/edit_story_modal/edit_story_modal.htm",
+      alignment: -5,
+      width: 400,
+      height: 350,
+      parameters: {
+        callStory: callStory,
+        storyPicker: storyPicker,
+        storyId: storyId,
+        storyRow: storyRow,
+        storyRowElement: storyRowElement,
+      },
+    });
+  }
 }
+
 function editChapter() {
-  Window.this.modal({
-    url: __DIR__ + "../../modals/edit_chapter_modal/edit_chapter_modal.htm",
-    alignment: -5,
-    width: 400,
-    height: 350,
-    parameters: {
-      callStory: callStory,
-      chapterId: chapterId,
-      chapterStatus: chapterStatus,
-      chapterRow: chapterRow,
-      chapterRowElement: chapterRowElement,
-    },
-  });
+  if (useJSX) {
+    Window.this.modal({
+      url: __DIR__ + "../../jsx-modals/basic_modal/basic_modal.htm",
+      alignment: -5,
+      width: 400,
+      height: 350,
+      parameters: {
+        jsx: (
+          <EditChapterModal
+            callStory={callStory}
+            chapterId={chapterId}
+            chapterStatus={chapterStatus}
+            chapterRow={chapterRow}
+            chapterRowElement={chapterRowElement}
+          ></EditChapterModal>
+        ),
+        title: "Edit chapter",
+      },
+    });
+  } else {
+    Window.this.modal({
+      url: __DIR__ + "../../modals/edit_chapter_modal/edit_chapter_modal.htm",
+      alignment: -5,
+      width: 400,
+      height: 350,
+      parameters: {
+        callStory: callStory,
+        chapterId: chapterId,
+        chapterStatus: chapterStatus,
+        chapterRow: chapterRow,
+        chapterRowElement: chapterRowElement,
+      },
+    });
+  }
+}
+
+function getCurrentFilters() {
+  const filters = {};
+  if (storyPicker?.filterMap) {
+    Object.entries(storyPicker.filterMap).forEach((x) => {
+      filters[x[0]] = { filter: x[1] };
+    });
+    Object.entries(storyPicker.excludeMap).forEach((x) => {
+      if (filters[x[0]]) {
+        filters[x[0]].exclude = x[1];
+      } else {
+        filters[x[0]] = { exclude: x[1] };
+      }
+    });
+  } else {
+    return undefined;
+  }
+  return filters;
 }
 
 function setStories(stories) {
@@ -97,6 +183,7 @@ function setStories(stories) {
       idName={"story_picker"}
       onRowClick={clickStoryRow}
       columnMetadata={storyColumnMetadata}
+      filters={getCurrentFilters()}
       toolbar={[
         <button
           class="story_picker_edit_btn dark"

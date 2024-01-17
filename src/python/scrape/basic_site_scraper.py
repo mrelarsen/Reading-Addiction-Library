@@ -48,12 +48,16 @@ class BasicSiteScraper(BasicScraper):
         if not self._configuration: raise Exception("Base Scraper needs a configuration")
         sections = self._url.split('/');
         chapter = self._configuration.get_chapter(body, sections);
-        if chapter is None:
-            print('No chapter, check url')
+        if chapter is None or not isinstance(chapter, Node):
+            print('No chapter, check url', chapter)
+            # print(body.html)
             return self._get_cannot_parse(self._url, not not self._driver);
+        # print(body.html)
         buttons = self._configuration.get_buttons(body);
         story_type = self._configuration.get_story_type(body, sections);
+        print(story_type);
         lines = BasicScraper.get_lines(chapter) if story_type == StoryType.NOVEL else None;
+
         byte_images = self._get_images_from_tags(img_tags=chapter.css('img'), src=self._configuration.src) if story_type == StoryType.MANGA else None;
         return ScraperResult(
             story_type = story_type,
