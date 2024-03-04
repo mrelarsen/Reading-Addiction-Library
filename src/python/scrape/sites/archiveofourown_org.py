@@ -3,16 +3,17 @@ import re;
 import requests
 import html as htmlEncoder;
 from selectolax.parser import Node
-from models.driver import Driver;
+from scrape.basic_scraper import ScraperResult;
+from helpers.driver import Driver;
 from scrape.configure_site_scraper import ConfigureSiteScraper;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         self._setup_folders();
         self._set_strings();
         super().useHtml(url);
     
-    def getConfiguration(self, url):
+    def getConfiguration(self, url: str):
         return None;
 
     def _set_strings(self):
@@ -24,7 +25,6 @@ class SiteScraper(ConfigureSiteScraper):
     def _scrape(self, node: Node):
         html_path = None;
         try:
-            print(f"bob a.a")
             story = node.css_first('.header .heading a');
             story_title = htmlEncoder.escape(story.text());
             story_key = story.attributes['href'].split('/')[-1];
@@ -39,7 +39,7 @@ class SiteScraper(ConfigureSiteScraper):
                 self._save(page.content, html_path);
         except Exception as error:
             print('error', error);
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 ['An error occurred downloading!', 'Url:', self._url, 'Error:', str(error)],
                 'An error occurred downloading!',
                 self._url
@@ -47,20 +47,20 @@ class SiteScraper(ConfigureSiteScraper):
 
         if os.path.exists(html_path):
             abs_path = os.path.abspath(html_path);
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 ['Fan-fiction has been downloaded', 'Proceeding to file'],
                 'Fan-fiction has been downloaded!',
                 url = self._url,
                 next_url = f'file:///{abs_path}#chap_1',
             );
         else:
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 ['Fan-fiction has been downloaded', f'Error: File not found - {html_path}'],
                 'Fan-fiction has been downloaded, but an error occurred!',
                 self._url
             );
         
-    def _save(self, content, dest_dir):
+    def _save(self, content: bytes, dest_dir: str):
         with open(dest_dir, "wb") as f:
             f.write(content);
         pass

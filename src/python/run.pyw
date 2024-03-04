@@ -1,7 +1,9 @@
+import json
+import os
 import run_paths;
 import sciter
 from handlers.reader_section import ReaderEventHandler
-from models.driver import Driver
+from helpers.driver import Driver
 from database.history import History
 from handlers.story_section import StoryEventHandler
 
@@ -9,7 +11,8 @@ class Window(sciter.Window):
     def __init__(self):
         super().__init__(ismain=True, uni_theme=True, debug=True)
         self.set_dispatch_options(enable=True, require_attribute=False)
-        self.history = History();
+        self.settings = self.load_settings();
+        self.history = History(self.settings.get('database_path'));
         self.tab_content = None;
         self.driver = Driver(self.call_javascript);
 
@@ -18,6 +21,41 @@ class Window(sciter.Window):
         self.story_section = None;
         self.story_handler = None;
         pass
+    
+    @sciter.script('save_settings')
+    def save_settings(self, settings: dict):
+        json_string = json.dumps({
+            "auto_continuation": settings.get('auto_continuation'),
+            "auto_scroll": settings.get('auto_scroll'),
+            "use_tts": settings.get('use_tts'),
+            "text_size": settings.get('text_size'),
+            "rate": settings.get('rate'),
+            "voice": settings.get('voice'),
+            "volume": settings.get('volume'),
+            "database_path": self.settings.get('database_path'),
+        });
+        with open('./settings.json', "wt") as f:
+            f.write(json_string);
+        self.reader_handler.set_settings(settings);
+
+    def load_settings(self) -> dict:
+        settings = {
+            "auto_continuation": True,
+            "auto_scroll": True,
+            "use_tts": True,
+            "text_size": 1,
+            "rate": 400,
+            "volume": 1,
+            "voice": 'zira',
+            "database_path": './database/stories.db',
+        }
+        if os.path.exists('./settings.json'):
+            with open('./settings.json', "r") as f:
+                content = f.read();
+                json_dict: dict = json.loads(content);
+                for key, value in json_dict.items():
+                    settings[key] = value;
+        return settings;
 
     def on_data_loaded(self, nm):
         # loaded
@@ -26,7 +64,7 @@ class Window(sciter.Window):
                 reader = self.get_root().find_first('#reader_section');
                 if reader:
                     self.reader_section = reader;
-                    self.reader_handler = ReaderEventHandler(reader, self.history, self.call_javascript, self.driver);
+                    self.reader_handler = ReaderEventHandler(reader, self.settings, self.history, self.call_javascript, self.driver);
             if not self.story_section:
                 story = self.get_root().find_first('#story_section');
                 if story:
@@ -35,7 +73,7 @@ class Window(sciter.Window):
         pass
 
     @sciter.script('call_handler')
-    def call_handler(self, handlerName, method, params):
+    def call_handler(self, handlerName: str, method: str, params: list):
         handler = getattr(self, handlerName)
         return getattr(handler, method)(*params)
 
@@ -43,7 +81,7 @@ class Window(sciter.Window):
     def shutdown(self):
         self.driver.toggle(False);
 
-    def call_javascript(self, methodName: str, params):
+    def call_javascript(self, methodName: str, params: list):
         try:
             self.call_function(methodName, *params)
         except Exception as e:

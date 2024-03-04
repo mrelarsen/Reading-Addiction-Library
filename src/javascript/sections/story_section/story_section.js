@@ -256,7 +256,11 @@ function setChapters(chapters) {
 }
 
 function clickChapterRow(row, rowElement, selectedRows) {
-  console.log(`Clicked row: ${row.name}`);
+  console.log(
+    `Clicked row: ${Object.entries(row)
+      .map((x) => [x[0], x[1]])
+      .reduce((a, c) => a.concat(c), [])}`
+  );
   callStory("copy_chapter_url", [row["id"]]);
   chapterId = row["id"];
   chapterRow = row;

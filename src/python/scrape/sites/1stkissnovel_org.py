@@ -8,17 +8,18 @@ from helpers.scraper_result import KeyResult, UrlResult;
 
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        super().useHtml(url);
+        # super().useHtml(url);
         # super().useDriver(url, driver);
         # super().useReDriver(url, driver);
-        # super().useSession(url, session_dict);
-
+        super().useSession(url, session_dict);
+        
     def getConfiguration(self, url: str):
         return BasicConfiguration(
             get_story_type = lambda node, sections: StoryType.NOVEL,
+            src = 'src',
+            get_chapter = lambda node, sections: node.css_first('.reading-content'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
-            get_chapter = lambda node, sections: node.css_first('.reading-content'),
             get_keys = lambda node, sections: KeyResult(
                 story = sections[4],
                 chapter = sections[5],
@@ -27,18 +28,19 @@ class SiteScraper(ConfigureSiteScraper):
         );
 
     def get_titles(self, node: Node, sections: list[str]):
-        chapter = node.css_first('ol.breadcrumb li.active')
+        chapter = node.css_first('ol.breadcrumb li.active');
+        story = node.css('ol.breadcrumb li a')[1];
         return KeyResult(
             chapter = chapter.text(),
             domain = None,
-            story = None,
+            story = story.text(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):
-        prev = node.css_first('a.prev_page'),
-        next = node.css_first('a.next_page'),
+        prev = node.css_first('.nav-previous a.prev_page');
+        next = node.css_first('.nav-next a.next_page');
         return UrlResult(
-            prev = self.tryGetHref(prev),
-            current = url,
-            next = self.tryGetHref(next),
+                prev = self.tryGetHref(prev),
+                current = url,
+                next = self.tryGetHref(next),
         );

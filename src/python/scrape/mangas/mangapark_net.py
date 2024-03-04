@@ -1,13 +1,14 @@
 import json;
 import requests;
-from models.scraper_result import ScraperResult
-from models.story_type import StoryType
-from models.driver import Driver
+from helpers.scraper_result import ScraperResult
+from helpers.story_type import StoryType
+from helpers.driver import Driver
 from selectolax.parser import HTMLParser, Node
 from scrape.configure_site_scraper import ConfigureSiteScraper;
+from helpers.scraper_result import KeyResult, UrlResult;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
         # super().useDriver(url, driver);
         # super().useReDriver(url, driver);
@@ -41,7 +42,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev_chapter = prev_chapter_same_source() or prev_chapter_next_source();
         return ScraperResult(
             story_type = StoryType.MANGA,
-            urls = self.Object(
+            urls = UrlResult(
                 prev = prefix + self.walk(prev_chapter, 'data.urlPath') if prev_chapter else None,
                 current = prefix + chapter_data['urlPath'],
                 next = prefix + self.walk(next_chapter, 'data.urlPath') if next_chapter else None,
@@ -49,14 +50,19 @@ class SiteScraper(ConfigureSiteScraper):
             chapter = chapter,
             lines = None,
             images = byte_images,
-            title = chapter_data['dname'],
-            keys = self.Object(
-                chapter = str(chapter_data['id']),
-                story = str(story_id)
+            titles = KeyResult(
+                chapter = chapter_data['dname'],
+                domain = None,
+                story = None,
             ),
-        )
+            keys = KeyResult(
+                chapter = str(chapter_data['id']),
+                story = str(story_id),
+                domain = None,
+            ),
+        );
     
-    def makeRequest(self, story_id, serial, lang):
+    def makeRequest(self, story_id: str, serial: str, lang: str):
         return {
             "operationName": "get_content_chapterSiblings",
             "query": "\n  query get_content_chapterSiblings($comicId:Int!, $serial:Float!, $lang:String) {\n    get_content_chapterSiblings(comicId:$comicId, serial:$serial, lang:$lang) {\n      \n      serialList\n\n      prevSerial\n      currSerial\n      nextSerial\n\n      prevNodes {\n        \n  id\n  data {\n    \n\n  id\n  sourceId\n\n  dbStatus\n  isNormal\n  isHidden\n  isDeleted\n  isFinal\n  \n  dateCreate\n  datePublic\n  dateModify\n  lang\n  volume\n  serial\n  dname\n  title\n  urlPath\n\n  srcTitle srcColor\n\n  count_images\n\n  stat_count_post_child\n  stat_count_post_reply\n  stat_count_views_login\n  stat_count_views_guest\n  \n  userId\n  userNode {\n    \n  id \n  data {\n    \nid\nname\nuniq\navatarUrl \nurlPath\n\nverified\ndeleted\nbanned\n\ndateCreate\ndateOnline\n\nstat_count_chapters_normal\nstat_count_chapters_others\n\nis_adm is_mod is_vip is_upr\n\n  }\n\n  }\n\n  disqusId\n\n\n  }\n\n        sser_read\n      }\n      sameNodes {\n        \n  id\n  data {\n    \n\n  id\n  sourceId\n\n  dbStatus\n  isNormal\n  isHidden\n  isDeleted\n  isFinal\n  \n  dateCreate\n  datePublic\n  dateModify\n  lang\n  volume\n  serial\n  dname\n  title\n  urlPath\n\n  srcTitle srcColor\n\n  count_images\n\n  stat_count_post_child\n  stat_count_post_reply\n  stat_count_views_login\n  stat_count_views_guest\n  \n  userId\n  userNode {\n    \n  id \n  data {\n    \nid\nname\nuniq\navatarUrl \nurlPath\n\nverified\ndeleted\nbanned\n\ndateCreate\ndateOnline\n\nstat_count_chapters_normal\nstat_count_chapters_others\n\nis_adm is_mod is_vip is_upr\n\n  }\n\n  }\n\n  disqusId\n\n\n  }\n\n        sser_read\n      }\n      nextNodes {\n        \n  id\n  data {\n    \n\n  id\n  sourceId\n\n  dbStatus\n  isNormal\n  isHidden\n  isDeleted\n  isFinal\n  \n  dateCreate\n  datePublic\n  dateModify\n  lang\n  volume\n  serial\n  dname\n  title\n  urlPath\n\n  srcTitle srcColor\n\n  count_images\n\n  stat_count_post_child\n  stat_count_post_reply\n  stat_count_views_login\n  stat_count_views_guest\n  \n  userId\n  userNode {\n    \n  id \n  data {\n    \nid\nname\nuniq\navatarUrl \nurlPath\n\nverified\ndeleted\nbanned\n\ndateCreate\ndateOnline\n\nstat_count_chapters_normal\nstat_count_chapters_others\n\nis_adm is_mod is_vip is_upr\n\n  }\n\n  }\n\n  disqusId\n\n\n  }\n\n        sser_read\n      }\n    }\n  }\n  ",
@@ -67,7 +73,7 @@ class SiteScraper(ConfigureSiteScraper):
             }
         };
     
-    def walk(self, object:dict, path: str):
+    def walk(self, object: dict, path: str):
         routes = path.split('.');
         result = object;
         for route in routes:
@@ -84,5 +90,5 @@ class SiteScraper(ConfigureSiteScraper):
             result = result[route];
         return result;
         
-    def getConfiguration(self, url):
+    def getConfiguration(self, url: str):
         return None;

@@ -1,37 +1,37 @@
-from models.reading_status import ReadingStatus
+from helpers.reading_status import ReadingStatus
 from scrape.basic_scraper import ScraperResult
 from database.database import StoryDatabase
 
 class History():
-    def __init__(self):
-        self.db = StoryDatabase();
+    def __init__(self, path: str|None = None):
+        self.db = StoryDatabase(path);
         pass
 
-    def add_chapter(self, url, result: ScraperResult, domain, status=ReadingStatus.COMPLETED):
-        return self.db.create_chapter(url, result, domain, status);
+    def add_chapter(self, result: ScraperResult, status=ReadingStatus.COMPLETED):
+        return self.db.create_chapter(result, status);
 
-    def get_stories(self, term = None):
+    def get_stories(self, term: str = None):
         return self.db.get_stories(term);
 
-    def get_chapters(self, story_id):
+    def get_chapters(self, story_id: int):
         return self.db.get_chapters(story_id);
 
-    def get_story(self, id, domain_key=None, domain_domain=None):
+    def get_story(self, id: int, domain_key:str = None, domain_domain: str = None):
         return self.db.get_story(id, domain_key, domain_domain);
 
-    def get_chapter(self, id):
+    def get_chapter(self, id: int):
         return self.db.get_chapter(id);
 
-    def save_chapter_details(self, chapter_id, chapter_name, chapter_desc, chapter_status):
+    def save_chapter_details(self, chapter_id: int, chapter_name: str, chapter_desc: str, chapter_status: str):
         return self.db.update_chapter(chapter_id, chapter_name, chapter_desc, chapter_status);
         
-    def save_story_details(self, story_id, story_name, story_desc, story_rating = 0, tags = ''):
+    def save_story_details(self, story_id: int, story_name: str, story_desc: str, story_rating: float = 0, tags: str = ''):
         return self.db.update_story(story_id, story_name, story_desc, story_rating, tags);
 
-    def merge_stories(self, from_story_ids, to_story_id):
+    def merge_stories(self, from_story_ids: list[int], to_story_id: int):
         self.db.merge_stories(from_story_ids, to_story_id);
 
-    def merge_database(self, database_path):
+    def merge_database(self, database_path: str):
         merging_db = StoryDatabase(database_path);
         stories = merging_db.get_stories(pure=True);
         domains = merging_db.get_domains(pure=True);

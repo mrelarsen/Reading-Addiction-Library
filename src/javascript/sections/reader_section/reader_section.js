@@ -197,6 +197,8 @@ onClick([
           parameters: {
             callReader: callReader,
             changeClass: changeClass,
+            saveSettings: (settings) =>
+              Window.this.xcall("save_settings", settings),
             settings: settings,
           },
         });

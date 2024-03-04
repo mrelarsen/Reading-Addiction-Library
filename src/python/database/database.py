@@ -1,11 +1,11 @@
 import sqlite3, uuid
-import typing;
+from typing import Any, Tuple;
 from datetime import datetime
-from models.reading_status import ReadingStatus
-from models.story_type import StoryType
+from helpers.reading_status import ReadingStatus
+from helpers.story_type import StoryType
 from scrape.basic_scraper import ScraperResult
 
-def dict_factory(cursor, row):
+def dict_factory(cursor: sqlite3.Cursor, row: Any):
     d = {}
     for idx, col in enumerate(cursor.description):
         if col[0] == 'type':
@@ -17,14 +17,14 @@ def dict_factory(cursor, row):
         else:
             d[col[0]] = row[idx];
     return d
-def dict_factory_pure(cursor, row):
+def dict_factory_pure(cursor: sqlite3.Cursor, row: Any):
     d = {}
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx];
     return d
 
 class StoryDatabase():
-    def __init__(self, path = None):
+    def __init__(self, path: str|None = None):
         self.database_path = (path and ((path[:4] == 'file' and path[7:]) or path)) or './database/stories.db';
         conn = sqlite3.connect(self.database_path)
         sqlite3.register_adapter(uuid.UUID, lambda u: u.bytes_le)
@@ -32,7 +32,7 @@ class StoryDatabase():
         self.__create_db(conn)
         conn.close()
 
-    def __create_db(self, db):
+    def __create_db(self, db: sqlite3.Connection):
         c = db.cursor();
         content = c.execute("""SELECT name FROM sqlite_master""");
         if len(content.fetchall()) == 0:
@@ -67,25 +67,25 @@ class StoryDatabase():
                 FOREIGN KEY(domain_id) REFERENCES domain(id)
                 )""")
 
-    def esc_quotes(self, string):
+    def esc_quotes(self, string: str):
         new_string = string.replace('"','""');
         return new_string;
 
-    def create_chapter(self, url: str, result: ScraperResult, domain_value: str, status: ReadingStatus):
-        print('create chapter', url, domain_value, result.keys.story, result.keys.chapter, result.story_type, result.title);
+    def create_chapter(self, result: ScraperResult, status: ReadingStatus):
+        print('create chapter', result.urls.current, result.keys.domain, result.keys.story, result.keys.chapter, result.story_type, result.titles.chapter);
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory_pure;
         cursor = conn.cursor();
-        cursor.execute(f"""SELECT domain.id FROM domain LEFT JOIN story ON story.id = domain.story_id WHERE domain.domain = "{domain_value}" and domain.key = "{result.keys.story}" and story.type = "{result.story_type.value}" """);
+        cursor.execute(f"""SELECT domain.id FROM domain LEFT JOIN story ON story.id = domain.story_id WHERE domain.domain = "{result.keys.domain}" and domain.key = "{result.keys.story}" and story.type = "{result.story_type.value}" """);
         domain = cursor.fetchone();
         domain_id = 0;
         if not domain:
             story_uuid = self.get_unique_identifier(cursor, "story");
-            cursor.execute(f"""INSERT INTO story (uuid,name,desc,type,tags) VALUES (?, "", "", "{result.story_type.value}", "")""", (story_uuid,));
+            cursor.execute(f"""INSERT INTO story (uuid,name,desc,type,tags) VALUES (?, "{result.titles.story and self.esc_quotes(result.titles.story) or ''}", "", "{result.story_type.value}", "")""", (story_uuid,));
             story_id = cursor.lastrowid;
             domain_uuid = self.get_unique_identifier(cursor, "domain");
-            cursor.execute(f"""INSERT INTO domain (uuid,key,domain,story_id) VALUES (?, "{result.keys.story}", "{domain_value}", "{story_id}")""", (domain_uuid,));
-            domain_id = cursor.lastrowid;
+            cursor.execute(f"""INSERT INTO domain (uuid,key,domain,story_id) VALUES (?, "{result.keys.story}", "{result.keys.domain}", "{story_id}")""", (domain_uuid,));
+            domain_id = cursor.lastrowid or 0;
         else: 
             domain_id = domain['id'];
         cursor.execute(f"""SELECT status, id FROM chapter WHERE domain_id = "{domain_id}" and key = "{result.keys.chapter}" """);
@@ -93,18 +93,20 @@ class StoryDatabase():
         chapter_id = None;
         if not chapter:
             chapter_uuid = self.get_unique_identifier(cursor, "chapter");
-            cursor.execute(f"""INSERT INTO chapter (uuid,name,desc,key,url,status,created,domain_id) VALUES (?, "{self.esc_quotes(result.title)}", "", "{result.keys.chapter}", "{self.esc_quotes(url)}", ?, ?, ?)""",
+            cursor.execute(f"""INSERT INTO chapter (uuid,name,desc,key,url,status,created,domain_id) VALUES (?, "{self.esc_quotes(result.titles.chapter)}", "", "{result.keys.chapter}", "{self.esc_quotes(result.urls.current)}", ?, ?, ?)""",
                 (chapter_uuid, status.value, datetime.now(), domain_id,));
             chapter_id = cursor.lastrowid;
         else:
             chapter_id = chapter['id']
-            status_str = '' if chapter['status'] == ReadingStatus.COMPLETED else ', status = ?';
-            cursor.execute(f"""UPDATE chapter SET updated = ? {status_str} WHERE id = {chapter_id} """, (datetime.now(), status.value,))
+            if ReadingStatus(chapter['status']) == ReadingStatus.COMPLETED:
+                cursor.execute(f"""UPDATE chapter SET updated = ? WHERE id = {chapter_id} """, (datetime.now(),))
+            else:
+                cursor.execute(f"""UPDATE chapter SET updated = ?, status = ? WHERE id = {chapter_id} """, (datetime.now(), status.value,))
         conn.commit();
         conn.close();
         return chapter_id;
 
-    def get_stories(self, term = None, pure=False) -> list[dict]:
+    def get_stories(self, term: str|None = None, pure=False) -> list[dict]:
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory_pure if pure else dict_factory;
         cursor = conn.cursor();
@@ -131,19 +133,19 @@ class StoryDatabase():
         conn.close();
         return data;
 
-    def get_chapters(self, story_id, pure=False) -> list[dict]:
+    def get_chapters(self, story_id: int, pure=False) -> list[dict]:
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory_pure if pure else dict_factory;
         cursor = conn.cursor();
         if not story_id:
             cursor.execute("""SELECT * FROM chapter""");
         else:
-            cursor.execute(f"""SELECT chapter.* FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE domain.story_id = "{story_id}" """);
+            cursor.execute(f"""SELECT chapter.*, domain.domain FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE domain.story_id = "{story_id}" """);
         data = cursor.fetchall();
         conn.close();
         return data;
 
-    def get_story(self, story_id, domain_key, domain_domain) -> dict:
+    def get_story(self, story_id: int, domain_key: str, domain_domain: str) -> dict:
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory;
         cursor = conn.cursor();
@@ -153,9 +155,9 @@ class StoryDatabase():
             cursor.execute(f"""SELECT story.* FROM domain LEFT JOIN story ON domain.story_id = story.id WHERE domain.key = "{domain_key}" and domain.domain = "{domain_domain}" """);
         data = cursor.fetchall();
         conn.close();
-        return data and data[0];
+        return data and data[0] or {};
 
-    def get_chapter(self, chapter_id) -> dict:
+    def get_chapter(self, chapter_id: int) -> dict:
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory;
         cursor = conn.cursor();
@@ -164,21 +166,21 @@ class StoryDatabase():
         conn.close();
         return data[0];
 
-    def update_chapter(self, chapter_id, chapter_name, chapter_desc, chapter_status:str):
+    def update_chapter(self, chapter_id: int, chapter_name: str, chapter_desc: str, chapter_status:str):
         conn = sqlite3.connect(self.database_path);
         cursor = conn.cursor();
         cursor.execute(f"""UPDATE chapter SET name = "{self.esc_quotes(chapter_name)}", desc = "{self.esc_quotes(chapter_desc)}", status = ? WHERE id = "{chapter_id}" """, (ReadingStatus[chapter_status.upper()].value,));
         conn.commit();
         conn.close();
 
-    def update_story(self, story_id, story_name, story_desc, story_rating, tags):
+    def update_story(self, story_id, story_name: str, story_desc: str, story_rating: float, tags: str):
         conn = sqlite3.connect(self.database_path);
         cursor = conn.cursor();
         cursor.execute(f"""UPDATE story SET name = "{self.esc_quotes(story_name)}", desc = "{self.esc_quotes(story_desc)}", rating = "{story_rating}", tags = "{self.esc_quotes(tags)}" WHERE id = "{story_id}" """);
         conn.commit();
         conn.close();
 
-    def create_chapters_from_entities(self, ext_stories, ext_domains, ext_chapters):
+    def create_chapters_from_entities(self, ext_stories: list[dict[str, Any]], ext_domains: list[dict[str, Any]], ext_chapters: list[dict[str, Any]]):
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory_pure;
         cursor = conn.cursor();
@@ -188,11 +190,11 @@ class StoryDatabase():
         existing_chapters, _ = self.get_existing_by_uuids(cursor, ext_chapters, 'chapter', ['key']);
         
         # Get all missing stories, domains and chapters
-        missing_story_commands = [];
-        missing_domains = [];
-        missing_chapters = [];
+        missing_story_commands: list[Tuple[uuid.UUID, str, str, int, float, str]] = [];
+        missing_domains: list[Tuple[str, Tuple[uuid.UUID, str, str, int]]] = [];
+        missing_chapters: list[Tuple[str, Tuple[uuid.UUID, str, str, str, str, int, datetime, datetime, int]]] = [];
         # Get all updated stories, domains and chapters
-        updated_story_commands = [];
+        updated_story_commands: list[Tuple[float, str, int]] = [];
         updated_chapters = [];
 
         for ext_chapter in ext_chapters:
@@ -204,9 +206,9 @@ class StoryDatabase():
                 if not existing_domain and not next((x for x in missing_domains if x[0] == ext_domain['uuid']), None):
                     existing_story = existing_stories.get(ext_story['uuid']) or next((x for x in missing_story_commands if x[0] == ext_story['uuid']), None);
                     if not existing_story and not next((x for x in missing_story_commands if x[0] == uuid.UUID(bytes_le=ext_story['uuid'])), None):
-                        missing_story_commands.append([uuid.UUID(bytes_le=ext_story['uuid']), self.esc_quotes(ext_story['name']), self.esc_quotes(ext_story['desc']), ext_story['type'], ext_story['rating'], ext_story['tags']]);
-                    missing_domains.append((ext_story['uuid'], [uuid.UUID(bytes_le=ext_domain['uuid']), ext_domain['key'], ext_domain['domain'], existing_story['id'] if existing_story else 0]));
-                missing_chapters.append((ext_domain['uuid'], [uuid.UUID(bytes_le=ext_chapter['uuid']), self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(ext_chapter['url']), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain['id'] if existing_domain else 0]));
+                        missing_story_commands.append((uuid.UUID(bytes_le=ext_story['uuid']), self.esc_quotes(ext_story['name']), self.esc_quotes(ext_story['desc']), ext_story['type'], ext_story['rating'], ext_story['tags']));
+                    missing_domains.append((ext_story['uuid'], (uuid.UUID(bytes_le=ext_domain['uuid']), ext_domain['key'], ext_domain['domain'], existing_story['id'] if existing_story else 0)));
+                missing_chapters.append((ext_domain['uuid'], (uuid.UUID(bytes_le=ext_chapter['uuid']), self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(ext_chapter['url']), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain['id'] if existing_domain else 0)));
             else:
                 ext_domain = ext_domains_map[ext_chapter['domain_id']];
                 ext_story = ext_stories_map[ext_domain['story_id']];
@@ -260,7 +262,7 @@ class StoryDatabase():
         conn.close();
         return created_stories, created_domains, created_chapters;
 
-    def unique(self, list1):
+    def unique(self, list1: list[Any]):
         unique_list = [];
         for x in list1:
             if x not in unique_list:
@@ -275,13 +277,13 @@ class StoryDatabase():
                 return next_uuid;
         raise Exception("Attempt to get unique identifier failed");
 
-    def get_existing_by_uuids(self, cursor: sqlite3.Cursor, elements, table, keys) -> typing.Tuple[dict, dict]:
+    def get_existing_by_uuids(self, cursor: sqlite3.Cursor, elements: list[dict[str, Any]], table: str, keys: list[str]) -> Tuple[dict, dict]:
         uuids = [x['uuid'] for x in elements];
         sql=f"select * FROM {table} WHERE uuid IN ({','.join(['?']*len(uuids))})";
         existing_stories = cursor.execute(sql, uuids).fetchall();
         return self.existing_has_property(existing_stories, elements, keys, table);
 
-    def existing_has_property(self, exists, elements, properties, table) -> typing.Tuple[dict, dict]:
+    def existing_has_property(self, exists: dict[str, Any], elements: dict[str, Any], properties: list[str], table: str) -> Tuple[dict[str, Any], dict[int, Any]]:
         exist_dict = {};
         element_dict = {};
         for exist in exists:
@@ -294,7 +296,7 @@ class StoryDatabase():
             element_dict[element['id']] = element;
         return exist_dict, element_dict;
 
-    def merge_stories(self, from_story_ids, to_story_id):
+    def merge_stories(self, from_story_ids: list[int], to_story_id: int):
         if not all(from_story_id > to_story_id for from_story_id in from_story_ids):
             print('Warning: not merging due to lowest story_id error');
             return;

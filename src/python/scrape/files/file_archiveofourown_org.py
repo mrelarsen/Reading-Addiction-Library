@@ -1,11 +1,11 @@
-from models.story_type import StoryType
+from helpers.story_type import StoryType
 from scrape.basic_file_scraper import FileConfiguration
-from models.driver import Driver
+from helpers.driver import Driver
 from scrape.basic_file_scraper import BasicFileScraper;
 import requests;
 
 class FileScraper(BasicFileScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         super().__init__(url);
 
     def get_configuration(self):

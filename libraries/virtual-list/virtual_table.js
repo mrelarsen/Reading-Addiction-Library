@@ -79,11 +79,6 @@ export class VirtualTable extends Element {
 
   sortColumnAndUpdateList(headerElement) {
     sortColumn(headerElement, this, this.columnMetadata);
-    const picker_body = this.querySelector(`#${this.idName + "_body"}`);
-    const length = picker_body.totalItems();
-    const start = 0;
-    const where = 0;
-    picker_body.oncontentrequired({ data: { length, start, where } });
   }
 
   updateFilter(column, filter) {
@@ -119,10 +114,14 @@ export class VirtualTable extends Element {
   }
 
   setVisibleColumns(visible) {
+    const columnMetadata = {};
     Object.entries(this.columnMetadata).forEach(
-      (x) => (x[1].visible = visible.includes(x[0]))
+      (x) =>
+        (columnMetadata[x[0]] = { ...x[1], visible: visible.includes(x[0]) })
     );
-    this.patch(this.render());
+    this.componentUpdate({
+      columnMetadata: columnMetadata,
+    });
   }
 
   overrideRow(item) {
@@ -293,23 +292,43 @@ class VirtualTableBody extends VirtualList {
     if (!rowItem) {
       return;
     }
-    const rowId = rowItem.id;
-    const listItems = [];
-    if (evt.ctrlKey) {
-      listItems.push(rowItem);
+    this.select(evt.ctrlKey, evt.shiftKey);
+    if (typeof this.onRowClick === "function") {
+      this.onRowClick(this.currentItem, rowElement, this.selectedItems);
     }
-    if (evt.shiftKey && this.currentItem) {
+  }
+
+  onkeydown(evt) {
+    const result = super.onkeydown(evt);
+    if (result) {
+      this.select(evt.ctrlKey, evt.shiftKey);
+      const rowElement = this.$(`tr[key=${this.currentItem.key}]`);
+      if (typeof this.onRowClick === "function") {
+        this.onRowClick(this.currentItem, rowElement, this.selectedItems);
+      }
+    }
+    return result;
+  }
+
+  select(ctrl, shift) {
+    const listItems = [];
+    if (ctrl) {
+      listItems.push(this.currentItem);
+    }
+    if (shift && this.currentItem) {
       const lastClickIndex = this.list.findIndex(
+        (x) => x.id == this.previousItem.id
+      );
+      const clickIndex = this.list.findIndex(
         (x) => x.id == this.currentItem.id
       );
-      const clickIndex = this.list.findIndex((x) => x.id == rowId);
       if (clickIndex > lastClickIndex) {
         listItems.push(...this.list.slice(lastClickIndex + 1, clickIndex + 1));
       } else if (clickIndex < lastClickIndex) {
         listItems.push(...this.list.slice(clickIndex, lastClickIndex));
       }
     }
-    let selected = [rowItem];
+    let selected = [this.currentItem];
     if (listItems.length !== 0) {
       selected = [...(this.selectedItems || selected)];
       listItems.forEach((listItem) => {
@@ -320,12 +339,8 @@ class VirtualTableBody extends VirtualList {
     }
 
     this.componentUpdate({
-      currentItem: this.itemOfElement(rowElement),
       selectedItems: selected,
     });
-    if (typeof this.onRowClick === "function") {
-      this.onRowClick(this.currentItem, rowElement, this.selectedItems);
-    }
   }
 }
 

@@ -1,15 +1,16 @@
 import os;
 import zipfile
 import requests
-from models.driver import Driver;
+from scrape.basic_scraper import ScraperResult;
+from helpers.driver import Driver;
 from scrape.basic_site_scraper import BasicSiteScraper;
 from libraries.fichub.fichub import FicHub
 from libraries.fichub.processing import check_url, get_format_type
 
 class SiteScraper(BasicSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         if not driver.is_running():
-            self._result = self._get_driver_required(url);
+            self._result = ScraperResult._get_driver_required(url);
         else:
             self._setup_folders();
             self._set_strings();
@@ -50,36 +51,36 @@ class SiteScraper(BasicSiteScraper):
                 print('downloaded')
 
             except Exception as error:
-                return self._get_default_tts(
+                return ScraperResult._get_default_tts(
                     texts = ['An error occurred downloading!', 'Url:', self._url, 'Error:', str(error)],
                     title = 'An error occurred downloading!',
                     url = self._url);
         else:
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 texts = ['The url is unsupported!', 'Url:', self._url],
                 title = 'The url is unsupported!',
                 url = self._url);
 
         abs_path = os.path.abspath(html_file_name);
         if os.path.exists(abs_path):
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 texts = ['Fan-fiction has been downloaded', 'Proceeding to file'],
                 title = 'Fan-fiction has been downloaded!',
                 url = self._url,
                 next_url = f'file:///{abs_path}#chap_1');
         else:
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 texts = ['Fan-fiction has been downloaded', f'Error: File not found - {abs_path}'],
                 title = 'Fan-fiction has been downloaded, but an error occurred!',
                 url = self._url);
         # e.g.file:///C:/Reading-Addiction-Library/Python/html/The_Queen_who_fell_to_Earth_by_Bobmin356-dwmB626w.html#chap_1'
         
-    def _zip(self, content, dest_dir):
+    def _zip(self, content: bytes, dest_dir: str):
         with open(dest_dir, "wb") as f:
             f.write(content);
         pass
         
-    def _unzip(self, source_filename, dest_dir, name):
+    def _unzip(self, source_filename: str, dest_dir: str, name: str):
         with zipfile.ZipFile(source_filename) as zf:
             zf.extractall(dest_dir);
             os.rename(f'{dest_dir}\\{name}.html', f'{dest_dir}\\fanfiction_net__{name}.html');

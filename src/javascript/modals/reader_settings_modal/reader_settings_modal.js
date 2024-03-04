@@ -1,8 +1,12 @@
 import { onClick } from "../../../../libraries/methods";
-const { callReader, changeClass, settings } = Window.this.parameters;
+const { callReader, saveSettings, changeClass, settings } =
+  Window.this.parameters;
 
 document.ready = () => {
   document.$("#rdr_btn_rate").textContent = `Rate: x${settings.rate}`;
+  document.$("#rdr_btn_tts").textContent = `TTS: ${
+    settings.use_tts ? "ON" : "OFF"
+  }`;
   settings.voices.forEach((voice) => {
     document.$("#rdr_slt_voice").append(<option class="dark">{voice}</option>);
   });
@@ -25,7 +29,7 @@ function onClickLocal() {
     [
       "#rdr_btn_save_settings",
       () => {
-        callReader("save_settings", [settings]);
+        saveSettings(settings);
         Window.this.close(0);
       },
     ],
@@ -49,6 +53,14 @@ function onClickLocal() {
         const rate = callReader("next_rate");
         btn.textContent = `Rate: x${rate}`;
         settings.rate = rate;
+      },
+    ],
+    [
+      "#rdr_btn_tts",
+      (_, btn) => {
+        const on = callReader("set_tts");
+        btn.textContent = `TTS: ${on ? "ON" : "OFF"}`;
+        settings.use_tts = on;
       },
     ],
     [

@@ -4,9 +4,29 @@
     <script type="module" src="./download_urls_modal.js"></script>
     <link rel="stylesheet" href="./styles.css">
   </head>
-  <body.dark-mode>
-    <label #lbl_reader_title>Url list</label>
-    <button.dark #btn_reader_download_paste>Paste</button><br>
+  <body.dark-mode.p-3>
+    <div.mb-2><strong><label #lbl_reader_title>Url list <a href="#" #show_hide_info><icon.icon-info></icon></a></label></strong></div>
+    <div #hidden_info style="display: none;">
+      <div><label>Add urls seperated by commas or whitespaces.</label></div>
+      <div><label>Prefix the url with a ! to continuous download to the "max chapter depth".</label></div>
+    </div>
+    <div.mb-2.mt-3><strong><label #lbl_chapter_depth>Max chapter depth</label></strong></div>
+      <div.toolbar>
+        <button.dark #btn_reader_1 style="padding: 2px 10px 2px 8px">1</button>
+        <button.dark #btn_reader_5 style="padding: 2px 10px 2px 8px">5</button>
+        <button.dark #btn_reader_10 style="padding: 2px 10px 2px 8px">10</button>
+        <button.dark #btn_reader_15 style="padding: 2px 10px 2px 8px">15</button>
+        <button.dark #btn_reader_20 style="padding: 2px 10px 2px 8px">20</button>
+        <button.dark #btn_reader_25 style="padding: 2px 10px 2px 8px">25</button>
+      </div>
+    <input.dark.mt-1.mb-1 #inp_chapter_depth type="number" min="1" style="width:*;" value="5"></input>
+    <div.toolbar>
+      <button.dark #btn_reader_download_paste>Replace</button>
+      <button.dark #btn_reader_download_paste_continuous>!Replace</button>
+      <button.dark #btn_reader_download_clear>Clear</button>
+      <button.dark #btn_reader_download_add>Add</button>
+      <button.dark #btn_reader_download_add_continuous>!Add</button>
+    </div>
     <richtext.dark #inp_reader_download_url_list style="width:*;height:*;">
       <htmlarea.dark/>
     </richtext>

@@ -4,14 +4,24 @@
     <script type="module" src="./read_urls_modal.js"></script>
     <link rel="stylesheet" href="./styles.css">
   </head>
-  <body.dark-mode>
-  <label #lbl_reader_title>Url list</label>
-  <button.dark #btn_reader_paste>Replace</button>
-  <button.dark #btn_reader_clear>Clear</button>
-  <button.dark #btn_reader_add>Add</button><br>
-  <richtext.dark #inp_reader_url_list style="width:*;height:*;">
-    <htmlarea.dark/>
-  </richtext>
-  <button.dark #btn_reader_read>Read list</button>
+  <body.dark-mode.p-3>
+    <div.mb-2><strong><label #lbl_reader_title>Url list <a href="#" #show_hide_info><icon.icon-info></icon></a></label></strong></div>
+    <div #hidden_info style="display: none;">
+      <div><label>Add urls seperated by commas or whitespaces.</label></div>
+      <div><label>Prefix the url with a ! to keep make it auto insert chapters when found.</label></div>
+      <div><label>"Read afterwards" will set the next urls to read after the current, if the current url is in the list it will continue from there.</label></div>
+    </div>
+    <div.toolbar>
+      <button.dark #btn_reader_paste>Replace</button>
+      <button.dark #btn_reader_paste_continuous>!Replace</button>
+      <button.dark #btn_reader_clear>Clear</button>
+      <button.dark #btn_reader_add>Add</button>
+      <button.dark #btn_reader_add_continuous>!Add</button>
+    </div>
+    <richtext.dark #inp_reader_url_list style="width:*;height:*;">
+      <htmlarea.dark/>
+    </richtext>
+    <button.dark #btn_reader_read>Read now</button>
+    <button.dark #btn_reader_read_after>Read afterwards</button>
   </body>
 </html>

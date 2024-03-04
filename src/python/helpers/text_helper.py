@@ -2,8 +2,7 @@ import json
 import re;
 import html as htmlParser
 from typing import Tuple;
-from scrape.basic_scraper import BasicScraper
-from models.scraper_result import ScraperResult
+from helpers.scraper_result import ScraperResult
 from selectolax.parser import Node, HTMLParser
 
 import importlib
@@ -57,12 +56,14 @@ class TextHelper():
     def clean_html(result: ScraperResult, parser = None):
         TextHelper.__clean_node(result.chapter, parser);
         result.chapter.unwrap_tags(['element']);
-        lines = BasicScraper.get_lines(result.chapter);
+        lines = ScraperResult.get_lines(result.chapter);
         result.lines = lines;
 
     def __clean_node(node: Node, parser, depth = 0, pad = False, ):
         text = node.text(strip=True);
-        if node.tag != '-text':
+        if node.tag == 'script':
+            node.remove();
+        elif node.tag != '-text':
             # remove display style in case of inline tags
             if node.tag == 'img' and node.parent.text(strip=True) == '' and node.parent.tag in TextHelper.__get_inline_tags():
                 if 'style' in node.attributes and cssutils_spec:
@@ -72,6 +73,7 @@ class TextHelper():
                         sheet.removeProperty('display');
                     node.attrs['style'] = sheet.cssText;
 
+            node = TextHelper.__setups_tables(node);
             padding = node.tag in TextHelper.__get_inline_tags_no_span();
 
             TextHelper.__merge_inline_twins(node);
@@ -104,9 +106,11 @@ class TextHelper():
             node.remove();
         else:
             node.remove();
-    
+
+    @staticmethod    
     def __get_inline_tags_no_span():
         return ['em', 'strong', 'small', 'b', 'big'];
+    @staticmethod
     def __get_inline_tags():
         return ['em', 'strong', 'small', 'b', 'big', 'span'];
 
@@ -117,6 +121,16 @@ class TextHelper():
             children.append(child);
             child = child.next;
         return children;
+    
+    def __setups_tables(node: Node):
+        if node.tag == 'table':
+            children = TextHelper.__get_children(node);
+            innerHTML = "".join([x.html for x in children]);
+            table_replacement = HTMLParser(f'<div class="outer-table"><table>{innerHTML}</table></div>').body.child;
+            node.insert_after(table_replacement);
+            node.remove();
+            return table_replacement.child;
+        return node;
     
     def __merge_inline_twins(node: Node):
         children = TextHelper.__get_children(node);
@@ -173,14 +187,16 @@ class TextHelper():
             return HTMLParser(f'<element>&nbsp;{html}&nbsp;</element>').body.child;
         else:
             return HTMLParser(f'<element>{html}</element>').body.child;
-        
-    def __is_json(text):
+
+    @staticmethod
+    def __is_json(text: str):
         try:
             json.loads(text)
         except ValueError as e:
             return False
         return True
 
+    @staticmethod
     def __clean_text(html: str):
         html = TextHelper.__remove_disruptive_symbols(html);
         html = TextHelper.__parse_linebreak(html);
@@ -188,16 +204,20 @@ class TextHelper():
         html = TextHelper.__parse_max_5_consecutive_chars(html);
         return html;
 
-    def __remove_disruptive_symbols(text:str):
+    @staticmethod
+    def __remove_disruptive_symbols(text: str):
         text = htmlParser.escape(htmlParser.unescape(text));
         return text;
 
-    def __parse_linebreak(text:str):
+    @staticmethod
+    def __parse_linebreak(text: str):
         content = [x.strip() for x in re.split(r'\n', text) if x.strip()];
         return content[0] if len(content) == 1 else ''.join([f'<p>{x}</p>' for x in content]);
 
-    def __parse_other_whitespaces(text:str):
+    @staticmethod
+    def __parse_other_whitespaces(text: str):
         return '&nbsp;'.join([x for x in re.split(r'[\s\u200b\u200c\ufeff]', text) if x.strip()]);
 
-    def __parse_max_5_consecutive_chars(text:str):
+    @staticmethod
+    def __parse_max_5_consecutive_chars(text: str):
         return re.sub(r'([^*])\1+', lambda match: match.group()[:5] if len(match.group()) > 5 else match.group(), text);

@@ -36,7 +36,7 @@ export const storyColumnMetadata = {
     width: "100px",
     sortable: true,
     displayValue: (item, col) =>
-      item[col]?.toString() == "None" ? "" : item[col],
+      !item[col] || item[col].toString() == "None" ? "" : item[col],
     sortValue: (item, col) =>
       (item[col]?.toString() == "None" ? "" : item[col]) || "0000-00-00",
   },

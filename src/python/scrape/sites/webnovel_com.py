@@ -1,17 +1,21 @@
 import re
+from typing import Any
+import requests
 from selectolax.parser import HTMLParser
-from models.story_type import StoryType
-from models.driver import Driver
+from helpers.story_type import StoryType
+from helpers.driver import Driver
 from scrape.configure_site_scraper import ConfigureSiteScraper;
 from requests import Session
 from scrape.basic_scraper import BasicScraper, ScraperResult;
+from selenium.webdriver.remote.webdriver import WebDriver
+from helpers.scraper_result import KeyResult, UrlResult;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, Session]):
         # self.useHtml(url);
         self.useSession(url, session_dict);
         
-    def _handle(self, url, driver, session, headers):
+    def _handle(self, url: str, driver: WebDriver, session: requests.Session, headers: Any):
         try:
             sections = url.split('/')
             story_id = sections[4].split('_')[-1];
@@ -22,39 +26,48 @@ class SiteScraper(ConfigureSiteScraper):
                 _csrfToken = cookies_dict['_csrfToken'];
                 print(_csrfToken)
             if len(sections) < 7 and not _csrfToken:
-                self._result = self._get_error('No token was given or found, add "/<token>" to the url manually', self._url);
+                self._result = ScraperResult._get_error('No token was given or found, add "/<token>" to the url manually', self._url);
                 return;
             token = len(sections) > 6 and sections[6] or _csrfToken;
             json: dict = super()._try_get_json(f'https://webnovel.com/go/pcm/chapter/getContent?csrfToken={token}&_fase=0&bookId={story_id}&chapterId={chapter_id}&encryptType=3&font=Merriweather&_=1676760223402', session, headers);
             if not json:
                 return;
             if not self.walk(json, 'data.chapterInfo.contents.0.content'):
-                self._result = self._get_error(f'Token {token} did not work in retrieving the content of the chapter, add another token manually by adding /*token* to the url e.g. {"/".join(sections[:6])}/{token}', self._url);
+                self._result = ScraperResult._get_error(f'Token {token} did not work in retrieving the content of the chapter, add another token manually by adding /*token* to the url e.g. {"/".join(sections[:6])}/{token}', self._url);
                 return;
-            chapterInfo = json.get('data').get('chapterInfo');
-            htmlStr = "".join([f'<div>{x.get("content")}</div>' for x in chapterInfo.get('contents')]);
+            chapterInfo: dict[str, Any] = self.walk(json, 'data.chapterInfo');
+            contents: list[dict]|None = chapterInfo.get('contents');
+            if not contents:
+                self._result = ScraperResult._get_error('Could not retrieve contents', self._url);
+                return;
+            htmlStr = "".join([f'<div>{x["content"]}</div>' for x in contents if x.get("content") is not None]);
             chapter = HTMLParser(htmlStr).body;
-            lines = BasicScraper.get_lines(chapter);
+            lines = ScraperResult.get_lines(chapter);
             self._result = ScraperResult(
                 story_type = StoryType.NOVEL,
-                urls = self.Object(
-                    prev = None if chapterInfo.get('preChapterId') == '-1' else self.getUrl(sections, chapterInfo.get('preChapterId'), chapterInfo.get('preChapterName'), token),
+                urls = UrlResult(
+                    prev = None if chapterInfo.get('preChapterId') == '-1' else self.getUrl(sections, chapterInfo['preChapterId'], chapterInfo['preChapterName'], token),
                     current = url,
-                    next = None if chapterInfo.get('nextChapterId') == '-1' else self.getUrl(sections, chapterInfo.get('nextChapterId'), chapterInfo.get('nextChapterName'), token)
+                    next = None if chapterInfo.get('nextChapterId') == '-1' else self.getUrl(sections, chapterInfo['nextChapterId'], chapterInfo['nextChapterName'], token)
                 ),
                 chapter = chapter,
                 lines = lines,
-                title = chapterInfo.get('chapterName'),
-                keys = self.Object(
+                titles = KeyResult(
+                    chapter = chapterInfo.get('chapterName'),
+                    domain = None,
+                    story = None,
+                ),
+                keys = KeyResult(
                     story = story_id,
                     chapter = chapter_id,
+                    domain = None,
                 ),
             )
         except Exception as error:
-            self._result = self._get_error(error, self._url);
+            self._result = ScraperResult._get_error(error, self._url);
         pass
     
-    def walk(self, dict:dict, path: str):
+    def walk(self, dict: dict, path: str):
         routes = path.split('.');
         result = dict;
         for route in routes:
@@ -71,10 +84,10 @@ class SiteScraper(ConfigureSiteScraper):
             result = result[route];
         return result;
 
-    def getUrl(self, sections: list[str], chapterId, chapterName: str, token: str):
+    def getUrl(self, sections: list[str], chapterId: int, chapterName: str, token: str):
         prefix = "/".join(sections[:5]);
         chapter = "-".join(re.split(r'[\s/]', chapterName.lower()));
         return f'{prefix}/{chapter}_{chapterId}/{token}';
 
-    def getConfiguration(self, url):
+    def getConfiguration(self, url: str):
         return None;

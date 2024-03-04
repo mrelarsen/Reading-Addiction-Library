@@ -1,13 +1,14 @@
-from models.story_type import StoryType
+import requests;
+from helpers.story_type import StoryType
 from scrape.basic_scraper import BasicScraper
-from models.driver import Driver
+from helpers.driver import Driver
 from scrape.basic_scraper import ScraperResult;
 from scrape.basic_site_scraper import BasicSiteScraper;
 from selectolax.parser import HTMLParser
-import requests;
+from helpers.scraper_result import KeyResult, UrlResult;
 
 class SiteScraper(BasicSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         super().__init__(url);
 
     def _run(self, a, b, c):
@@ -21,7 +22,7 @@ class SiteScraper(BasicSiteScraper):
         chapter_index = chapters.index(chapter);
         page = requests.get(f"https://www.wattpad.com/apiv2/storytext?id={id}", headers={'User-Agent': 'Mozilla/5.0'});
         if page.status_code != 200:
-            return self._get_default_tts(
+            return ScraperResult._get_default_tts(
                 texts = ["Chapter not found!"],
                 title = "Chapter not found!",
                 url = self._url);
@@ -31,16 +32,21 @@ class SiteScraper(BasicSiteScraper):
         print(res.json())
         return ScraperResult(
             story_type=StoryType.NOVEL,
-            urls = self.Object(
+            urls = UrlResult(
                 prev = "https://www.wattpad.com/" + str(chapters[chapter_index - 1]['ID']) if 0 < chapter_index - 1 else None,
                 current = self._url,
                 next = "https://www.wattpad.com/" + str(chapters[chapter_index + 1]['ID']) if len(chapters) > chapter_index + 1 else None,
             ),
             chapter = body,
-            lines = BasicScraper.get_lines(body),
-            title = chapter['TITLE'],
-            keys = self.Object(
+            lines = ScraperResult.get_lines(body),
+            titles = KeyResult(
+                chapter = chapter['TITLE'],
+                domain = None,
+                story = None,
+            ),
+            keys = KeyResult(
                 story = res.json()['group'],
                 chapter = sections[3],
+                domain = None,
             ),
         )

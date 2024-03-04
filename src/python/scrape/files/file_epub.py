@@ -1,18 +1,18 @@
 from selectolax.parser import HTMLParser, Node
-from models.story_type import StoryType
+from helpers.story_type import StoryType
 from scrape.basic_scraper import BasicScraper;
 from scrape.basic_file_scraper import BasicFileScraper;
-from scrape.basic_scraper import ScraperResult;
+from scrape.basic_scraper import ScraperResult, KeyResult, UrlResult;
 # from epub import open_epub
 import zipfile;
 from lxml import etree;
 import os;
 
 class FileScraper(BasicFileScraper):
-    def __init__(self, url, driver):
+    def __init__(self, url: str, driver):
         super().__init__(url);
 
-    def _try_read_file(self, path):
+    def _try_read_file(self, path: str):
         dict = self.epub_info(path);
         htmls = dict['htmls'];
         zip_content = dict['zip_content'];
@@ -30,22 +30,26 @@ class FileScraper(BasicFileScraper):
     def _scrape(self, body: Node):
         return ScraperResult(
             story_type=StoryType.NOVEL,
-            urls = self.Object(
+            urls = UrlResult(
                 prev = None,
                 current = f"file:///{self._url}",
                 next = None,
             ),
             chapter = body,
-            lines = BasicScraper.get_lines(body),
-            title = 'epub',
-            keys = self.Object(
+            lines = ScraperResult.get_lines(body),
+            titles = KeyResult(
+                story = None,
+                chapter = 'epub',
+                domain=None,
+            ),
+            keys = KeyResult(
                 story = None,
                 chapter = None,
-                type=StoryType.NOVEL,
+                domain = None,
             ),
         )
 
-    def epub_info(self, fname):
+    def epub_info(self, fname: str):
         def xpath(element, path):
             return element.xpath(
                 path,

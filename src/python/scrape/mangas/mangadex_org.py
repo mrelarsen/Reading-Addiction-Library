@@ -1,14 +1,13 @@
-import json
 import requests
-from scrape.basic_scraper import BasicScraper;
-from models.scraper_result import ScraperResult
-from models.story_type import StoryType
-from models.driver import Driver
-from selectolax.parser import HTMLParser, Node;
+from helpers.scraper_result import ScraperResult
+from helpers.story_type import StoryType
+from helpers.driver import Driver
+from selectolax.parser import HTMLParser;
 from scrape.configure_site_scraper import ConfigureSiteScraper;
+from helpers.scraper_result import KeyResult, UrlResult;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
         # super().useDriver(url, driver);
         # super().useReDriver(url, driver);
@@ -39,7 +38,7 @@ class SiteScraper(ConfigureSiteScraper):
         group_uuid = next((x for x in relationships if x['type'] == 'scanlation_group'), { 'id': None })['id'];
         user_uuid = next((x for x in relationships if x['type'] == 'user'), { 'id': None })['id'];
         if not manga_uuid:
-            self._result = BasicScraper._get_default_tts(
+            self._result = ScraperResult._get_default_tts(
                 texts = ['Manga could not be found!', 'Url:', url],
                 title = 'Manga could not be found while parsing the url!',
                 url = url,
@@ -47,7 +46,7 @@ class SiteScraper(ConfigureSiteScraper):
             return;
         creator_uuid = group_uuid or user_uuid;
         if not creator_uuid:
-            self._result = BasicScraper._get_default_tts(
+            self._result = ScraperResult._get_default_tts(
                 texts = ['Manga creator could not be found!', 'Url:', url],
                 title = 'Manga creator could not be found while parsing the url!',
                 url = url,
@@ -72,7 +71,7 @@ class SiteScraper(ConfigureSiteScraper):
         prefix = "https://mangadex.org/chapter/";
         self._result = ScraperResult(
             story_type = StoryType.MANGA,
-            urls = self.Object(
+            urls = UrlResult(
                 prev = prefix + prev_chapter['id'] if prev_chapter else None,
                 current = url,
                 next = prefix + next_chapter['id'] if next_chapter else None,
@@ -80,27 +79,32 @@ class SiteScraper(ConfigureSiteScraper):
             chapter = chapter,
             lines = [],
             images = byte_images,
-            title = ' - '.join([attributes.get('chapter'), attributes.get('title')]) if attributes.get('title') else attributes.get('chapter'),
-            keys = self.Object(
+            titles = KeyResult(
+                chapter=' - '.join([attributes.get('chapter'), attributes.get('title')]) if attributes.get('title') else attributes.get('chapter'),
+                domain = None,
+                story = None,
+            ),
+            keys = KeyResult(
                 chapter = chapter_uuid,
-                story = manga_uuid
+                story = manga_uuid,
+                domain = None,
             ),
         );
     
-    def zpad(self, val, n):
+    def zpad(self, val: str, n: int):
         bits = val.split('.')
         if len(bits) < 2:
             return bits[0].zfill(n);
         return "%s.%s" % (bits[0].zfill(n), bits[1])
 
-    def getVolumeChapterIndeces(self, volumes, chapter_uuid):
+    def getVolumeChapterIndeces(self, volumes: dict[str, dict[str, dict]], chapter_uuid: str):
         for v_index, (v_key, volume) in enumerate(volumes.items()):
             chapters = self.walk(volume, 'chapters')
             for c_index, (c_key, chapter) in enumerate(chapters.items()):
                 if chapter['id'] == chapter_uuid:
                     return v_index, c_index;
     
-    def walk(self, object:dict, path: str):
+    def walk(self, object: dict, path: str):
         routes = path.split('.');
         result = object;
         for route in routes:
@@ -117,5 +121,5 @@ class SiteScraper(ConfigureSiteScraper):
             result = result[route];
         return result;
         
-    def getConfiguration(self, url):
+    def getConfiguration(self, url: str):
         return None;

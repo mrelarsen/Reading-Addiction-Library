@@ -1,14 +1,13 @@
 import requests
-import re
-from selectolax.parser import HTMLParser, Node
-from models.scraper_result import ScraperResult;
-from models.story_type import StoryType
-from models.driver import Driver
-from scrape.basic_scraper import BasicConfiguration;
+from selectolax.parser import HTMLParser
+from helpers.scraper_result import ScraperResult;
+from helpers.story_type import StoryType
+from helpers.driver import Driver
 from scrape.configure_site_scraper import ConfigureSiteScraper;
+from helpers.scraper_result import KeyResult, UrlResult;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
         # super().useDriver(url, driver);
         # super().useReDriver(url, driver);
@@ -34,13 +33,13 @@ class SiteScraper(ConfigureSiteScraper):
         chapters_content = self._try_get_json(chapters_url, self._session, self.headers);
         chapters = self.walk(chapters_content, 'chapters');
         chapter = next((x for x in chapters if x['_id'] == chapter_uuid), None);
-        chapter_number = chapter['serialNumber'];
+        chapter_number: int = chapter['serialNumber'] if chapter else -1000;
         prev_chapter = next((x for x in chapters if x['serialNumber'] == chapter_number - 1), None);
         next_chapter = next((x for x in chapters if x['serialNumber'] == chapter_number + 1), None);
 
         self._result = ScraperResult(
             story_type = StoryType.MANGA,
-            urls = self.Object(
+            urls = UrlResult(
                 prev = "/".join(sections[:-1] + [prev_chapter['_id']]) if prev_chapter else None,
                 current = url,
                 next = "/".join(sections[:-1] + [next_chapter['_id']]) if next_chapter else None,
@@ -48,14 +47,19 @@ class SiteScraper(ConfigureSiteScraper):
             chapter = data_chapter,
             lines = [],
             images = byte_images,
-            title = f'Chapter {chapter_number}',
-            keys = self.Object(
-                chapter = chapter_uuid,
-                story = manga_uuid
+            titles = KeyResult(
+                chapter=f'Chapter {chapter_number}',
+                domain = None,
+                story = None,
             ),
+            keys = KeyResult(
+                chapter = chapter_uuid,
+                story = manga_uuid,
+                domain = None,
+            )
         );
     
-    def walk(self, object:dict, path: str):
+    def walk(self, object: dict, path: str):
         routes = path.split('.');
         result = object;
         for route in routes:
@@ -72,5 +76,5 @@ class SiteScraper(ConfigureSiteScraper):
             result = result[route];
         return result;
         
-    def getConfiguration(self, url):
+    def getConfiguration(self, url: str):
         return None;

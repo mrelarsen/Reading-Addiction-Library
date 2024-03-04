@@ -2,7 +2,7 @@ import requests;
 import random;
 
 class Joke():
-    def __init__(self, joke_type=None):
+    def __init__(self, joke_type: int|None = None):
         joke_type = joke_type or random.randrange(10);
         self.texts = ['None'];
         self.type = 'None';
@@ -112,7 +112,7 @@ class Joke():
             return(['Something went wrong, not json response']);
         return self.parse_question(json);
 
-    def parse_jokeapi_json(self, json):
+    def parse_jokeapi_json(self, json: dict[str, str]) -> list[str]:
         if 'type' in json and json['type'] == 'twopart':
             setup = json['setup'];
             delivery = json['delivery']
@@ -125,7 +125,7 @@ class Joke():
             print(json.__dict__)
             return(['Something went wrong']);
 
-    def parse_question(self, text):
+    def parse_question(self, text: str):
         if not isinstance(text, str):
             print('Error parsing joke', text);
             return ['Error parsing joke'];

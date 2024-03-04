@@ -1,33 +1,32 @@
 import os
 import threading
-from typing import Any, Callable, Optional, Union;
+from typing import Callable, Optional, Union;
 import requests;
 from io import BytesIO
 from PIL import Image;
 from math import ceil;
 from selectolax.parser import HTMLParser, Node
-from models.story_type import StoryType
-from models.scraper_result import ScraperResult
-from models.joke import Joke;
+from helpers.story_type import StoryType
+from helpers.scraper_result import ScraperResult, KeyResult, UrlResult
+from helpers.joke import Joke;
 from selenium.webdriver.remote.webdriver import WebDriver
 
 class BasicConfiguration():
-    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_title: Callable[[Node], Node], get_buttons: Callable[[Node], Any], get_urls: Callable[[Any], Any], get_keys: Callable[[Node, list[str]], Any], get_chapter: Callable[[Node, list[str]], Node] = None, src: Union[str, Callable[[Node], str]] = None):
+    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_titles: Callable[[Node, list[str]], KeyResult], get_urls: Callable[[Node, list[str]], UrlResult], get_keys: Callable[[Node, list[str]], KeyResult], get_chapter: Callable[[Node, list[str]], Node]|None = None, src: Union[str, Callable[[Node], str]]|None = None):
         self.get_story_type = get_story_type;
         self.src = src; # manga
         self.get_chapter = get_chapter; # tts
-        self.get_title = get_title;
-        self.get_buttons = get_buttons;
+        self.get_titles = get_titles;
         self.get_urls = get_urls;
         self.get_keys = get_keys;
         pass
 
 class BasicScraper():
-    def __init__(self, url, driver:WebDriver=None, session:Optional[requests.Session]=None, headers={}):
+    def __init__(self, url: str, driver:WebDriver|None=None, session:requests.Session|None=None, headers={}):
         self._url = url;
         self._headers = headers;
         self._setup_folders();
-        self._result: ScraperResult = None;
+        self._result: ScraperResult|None = None;
         self._driver = driver;
         self._session = session;
         pass
@@ -46,8 +45,8 @@ class BasicScraper():
     def Object(**kwargs):
         return type("Object", (), kwargs);
 
-    def get_result(self, domain=None) -> ScraperResult:
-        return self._result.get_with_domain(domain);
+    def get_result(self, domain: str|None = None) -> ScraperResult:
+        return self._result is not None and self._result.get_with_domain(domain) or ScraperResult._get_error('Missing ScraperResult', self._url);
 
     def get_children(node: Node):
         children = [];
@@ -57,24 +56,7 @@ class BasicScraper():
             child = child.next;
         return children;
 
-    @staticmethod
-    def get_lines(node: Node, depth = 0):
-        text = node.text(strip=True)
-        if node.tag != '-text':
-            # children = BasicScraper.get_children(node);
-            # if len(children) > 0 and all(x.tag in ['em', 'strong', 'small', 'b', 'big', 'span', '-text'] for x in children):
-            #     return [node];
-            childLines = []
-            child = node.child;
-            while child:
-                childLines.extend(BasicScraper.get_lines(child, depth + 1));
-                child = child.next;
-            return childLines;
-        elif text != "" and node.parent != None:
-            return [node];
-        return []
-
-    def _get_images_from_tags(self, img_tags:list[Node]=[], src='src'):
+    def _get_images_from_tags(self, img_tags: list[Node]=[], src = 'src'):
         img_urls = [];
         for img_tag in img_tags:
             if callable(src):
@@ -83,7 +65,7 @@ class BasicScraper():
                 img_urls.append(img_tag.attributes[src]);
         return self._get_images(img_urls);
 
-    def _get_images(self, img_urls: list[str] = [], retry=0):
+    def _get_images(self, img_urls: list[str] = [], retry = 0):
         threads, images = self._get_image_threads(img_urls)
         for thread in threads:
             thread.start();
@@ -112,7 +94,7 @@ class BasicScraper():
             threads.append(t);
         return threads, images;
 
-    def _get_image_async(self, images: list, img_url):
+    def _get_image_async(self, images: list, img_url: str):
         url_no_params = img_url.split('?')[0];
         file_name, ext = os.path.splitext(url_no_params);
         merged_headers = dict();
@@ -137,7 +119,7 @@ class BasicScraper():
             if success:
                 break;
 
-    def _extract_image(self, images: list, img_file, ext) -> bool:
+    def _extract_image(self, images: list, img_file: bytes, ext: str) -> bool:
         try:
             url_img = Image.open(img_file if isinstance(img_file, str) else BytesIO(img_file)).convert('RGB')
             url_img_width, url_img_height = url_img.size;
@@ -155,12 +137,12 @@ class BasicScraper():
             print('error', e);
             return False;
 
-    def _try_get_json(self, url, session:requests.Session, headers={}):
+    def _try_get_json(self, url: str, session: requests.Session, headers = {}):
         result = self._try_get_response(url, session, headers);
         if result is not None:
             return result.json();
 
-    def _try_get_response(self, url:str, session:Optional[requests.Session], headers={}, setResult=True):
+    def _try_get_response(self, url: str, session: Optional[requests.Session], headers = {}, setResult = True):
         error = "";
         try:
             if session:
@@ -176,70 +158,5 @@ class BasicScraper():
         except requests.exceptions.RequestException as e:
             error = 'A error occured during the request';
         if setResult:
-            self._result = BasicScraper._get_error(error, self._url, True);
-
-    @staticmethod
-    def _get_default_tts(texts: list, title: str, url:str, next_url: Optional[str] = None, loading=False, driver_required=False, driver_requires_reset=False):
-        spans =  map(lambda x: f"<div>{x}</div>", texts);
-        chapter = HTMLParser(f"<div>{''.join(spans)}</div>").body.child;
-        return ScraperResult(
-            story_type=StoryType.NOVEL,
-            urls = BasicScraper.Object(prev=None, current = url, next=next_url),
-            chapter = chapter,
-            lines = BasicScraper.get_lines(chapter),
-            title = title,
-            keys = BasicScraper.Object(story=None, chapter=None),
-            loading = loading,
-            driver_required = driver_required,
-            driver_requires_reset = driver_requires_reset,
-        )
-
-    @staticmethod
-    def _get_error(error, url, loading=False):
-        print('An error occurred while parsing the url!', 'Url:', url, 'Error:', error);
-        return BasicScraper._get_default_tts(
-            texts = ['An error occurred while parsing the url!', 'Url:', url, 'Error:', str(error)],
-            title = 'An error occurred while parsing the url!',
-            url = url,
-            loading=loading);
-
-    @staticmethod
-    def _get_cannot_parse(url, driver_requires_reset=False):
-        return BasicScraper._get_default_tts(
-            texts = ['Failed to parse content of the url!', 'Url:', url],
-            title = 'Cannot parse the url!',
-            url = url,
-            next_url=url if driver_requires_reset else None,
-            driver_requires_reset=driver_requires_reset);
-    
-    @staticmethod
-    def _get_waiting(url: str, next_url: str):
-        joke = Joke();
-        return BasicScraper._get_default_tts(
-            texts = ['Loading', joke.type] + joke.texts,
-            title = 'Loading site',
-            url = url,
-            next_url = next_url,
-            loading = True);
-    
-    @staticmethod
-    def _get_driver_required(url: str):
-        joke = Joke();
-        return BasicScraper._get_default_tts(
-            texts = ['Loading', joke.type] + joke.texts,
-            title = 'Starting driver for website',
-            url = url,
-            next_url = url,
-            driver_required = True);
-    
-    @staticmethod
-    def _get_driver_requires_reset(url: str):
-        joke = Joke();
-        return BasicScraper._get_default_tts(
-            texts = ['Resetting', joke.type] + joke.texts,
-            title = 'Starting driver for website',
-            url = url,
-            next_url = url,
-            driver_required = True,
-            driver_requires_reset = True);
+            self._result = ScraperResult._get_error(error, self._url, True);
 

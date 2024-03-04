@@ -4,23 +4,23 @@
     <script type="module" src="./reader_settings_modal.js"></script>
     <link rel="stylesheet" href="./styles.css">
   </head>
-  <body.dark-mode>
+  <body.dark-mode.p-3>
     <div>
-      <label>Voice:</label><br>
-      <button.dark #rdr_btn_rate>Rate</button>
-      <select.dark #rdr_slt_voice>
-      </select>
+      <div><strong><label>Voice:</label></strong></div>
+      <div.mt-2><button.dark #rdr_btn_tts>TTS: OFF</button></div>
+      <div.mt-2><button.dark #rdr_btn_rate>Rate</button></div>
+      <div.mt-2><select.dark #rdr_slt_voice></select></div>
     </div>
     <div>
-      <label>Automatic:</label><br>
-      <button.dark #rdr_btn_auto>Continuation: True</button>
-      <button.dark #rdr_btn_scroll>Scroll: True</button>
+      <div.mt-3><strong><label>Automatic:</label></strong></div>
+      <div.mt-2><button.dark #rdr_btn_auto>Continuation: True</button></div>
+      <div.mt-2><button.dark #rdr_btn_scroll>Scroll: True</button></div>
     </div>
     <div>
-      <label>Text:</label><br>
-      <button.dark #rdr_btn_text_size>Text 1*</button>
+      <div.mb-2.mt-3><strong><label>Text:</label></strong></div>
+      <div.mt-2><button.dark #rdr_btn_text_size>Text 1*</button></div>
     </div>
-    <div.inline style="text-align:right;">
+    <div.inline.mt-3 style="text-align:right;">
       <button.dark #rdr_btn_save_settings>Save settings</button>
     </div>
   </body>
