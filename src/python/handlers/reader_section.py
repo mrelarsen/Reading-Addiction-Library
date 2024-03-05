@@ -51,6 +51,8 @@ class ReaderEventHandler():
         self.number_of_characters = 1;
         self.word_matches: list[list[WordMatch]] = [];
         self.reading_timer: threading.Thread|None = None;
+        self.html_list = [];
+        self.html_index = 0;
         self.parser = None;
         if cssutils_spec:
             self.parser = CSSParser();
@@ -80,6 +82,7 @@ class ReaderEventHandler():
 
     @sciter.script('download_list')
     def download_list(self, text: str, chapter_depth: int = 1):
+        self.html_list = [];
         urllist = [x for x in re.split(r'[\s,]', text) if x and re.match(r'^!?(http|file)', x)];
         print(urllist)
         self.download(chapter_depth, urllist);
@@ -114,6 +117,7 @@ class ReaderEventHandler():
     @sciter.script('read_list')
     def read_list(self, text: str, next = False):
         urllist = [x for x in re.split(r'[\s,]', text) if x and re.match(r'^!?(http|file)', x)];
+        self.html_list = [];
         print(urllist)
         if not next:
             self.read(urllist=urllist);
@@ -241,7 +245,11 @@ class ReaderEventHandler():
     def on_read_completion(self):
         self.scrape_service.try_to_save(ReadingStatus.COMPLETED);
         if self.auto_continuation:
-            self.read(dir=1, force=True);
+            if len(self.html_list) > self.html_index + 1:
+                self.html_index += 1;
+                self.read_html(self.html_list[self.html_index])
+            else:
+                self.read(dir=1, force=True);
 
     def setup_chapter(self, result: ScraperResult):
         self.chapter = {};
@@ -327,7 +335,7 @@ class ReaderEventHandler():
 
     @sciter.script('read_html')
     def read_html(self, html: str):
-        body = HTMLParser(html).body;
+        body = HTMLParser(f'<div>{html}</div>').body.child;
         result = ScraperResult(
             story_type=StoryType.NOVEL,
             urls = UrlResult(prev=None, current = None, next=None),
@@ -336,7 +344,13 @@ class ReaderEventHandler():
             titles = KeyResult(story=None, chapter='Pasted content', domain=None),
             keys = KeyResult(story=None, chapter=None, domain=None),
         );
-        self.read_tts(result=result, force=False);
+        self.read_tts(result=result, force=True);
+
+    @sciter.script('read_html_list')
+    def read_html_list(self, html_list: list[str]):
+        self.html_list = html_list;
+        self.html_index = 0;
+        self.read_html(html_list[self.html_index]);
 
     @sciter.script('copy_url')
     def copy_url(self, dir = 0):

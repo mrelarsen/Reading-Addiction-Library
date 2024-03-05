@@ -63,20 +63,24 @@ function replaceManga(images) {
 const md = new Remarkable({ html: true });
 md.use(HeaderIds({ anchorText: " " }));
 
-function loadMarkdown(href) {
-  href = URL.fromPath(href);
-  load(href);
+function loadMarkdown(hrefs) {
+  hrefs = hrefs.map((href) => URL.fromPath(href));
+  load(hrefs);
 }
 
-async function load(href) {
+async function load(hrefs) {
   try {
-    const url = new URL(href);
-    if (url.extension !== "md") return;
+    const urls = hrefs.map((href) => new URL(href));
+    if (urls.some((url) => url.extension !== "md")) return;
 
-    const r = await fetch(url.href);
-    let body = r.text();
-    body = md.render(body);
-    callReader("read_html", [body]);
+    const bodies = await Promise.all(
+      urls.map(async (url) => {
+        const r = await fetch(url.href);
+        let body = r.text();
+        return md.render(body);
+      })
+    );
+    callReader("read_html_list", [bodies]);
   } catch (e) {
     console.error(e.message);
   }
@@ -88,13 +92,13 @@ onClick([
   [
     "#rdr_btn_open_file",
     () => {
-      let fileName = Window.this.selectFile({
+      let fileNames = Window.this.selectFile({
         filter: "Markdown Files (*.md)|*.md;|All Files (*.*)|*.*",
-        mode: "open",
+        mode: "open-multiple", // open
         path: URL.toPath(__DIR__ + "../../Novels/Stories"),
       });
-      if (fileName) {
-        loadMarkdown(fileName);
+      if (fileNames.length > 0) {
+        loadMarkdown(fileNames);
       }
     },
   ],
