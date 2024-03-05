@@ -23,6 +23,60 @@ def dict_factory_pure(cursor: sqlite3.Cursor, row: Any):
         d[col[0]] = row[idx];
     return d
 
+class StoryDbo():
+    def __init__(self, id: int | None, uuid: uuid.UUID, name: str, desc: str, type: int, rating: float, tags: str):
+        self.id = id;
+        self.uuid = uuid;
+        self.name = name;
+        self.desc = desc;
+        self.type = type;
+        self.rating = rating;
+        self.tags = tags;
+        pass
+
+    def getInsertCommand(self):
+        return (self.uuid, self.name, self.desc, self.type, self.rating, self.tags);
+
+    def getUpdateCommand(self):
+        return (self.rating, self.tags, self.id);
+
+class DomainDbo():
+    def __init__(self, id: int | None, uuid: uuid.UUID, key: str, domain: str, story_id: int, story_uuid: uuid.UUID|None = None):
+        self.id = id;
+        self.uuid = uuid;
+        self.key = key;
+        self.domain = domain;
+        self.story_id = story_id;
+        self.story_uuid = story_uuid;
+        pass
+
+    def setStoryId(self, story_id):
+        self.story_id = story_id;
+
+    def getInsertCommand(self):
+        return (self.uuid, self.key, self.domain, self.story_id);
+
+class ChapterDbo():
+    def __init__(self, id: int | None, uuid: uuid.UUID, name: str, desc: str, key: str, url: str, status: int, created: datetime, updated: datetime, domain_id: int, domain_uuid: uuid.UUID|None = None):
+        self.id = id;
+        self.uuid = uuid;
+        self.name = name;
+        self.desc = desc;
+        self.key = key;
+        self.url = url;
+        self.status = status;
+        self.created = created;
+        self.updated = updated;
+        self.domain_id = domain_id;
+        self.domain_uuid = domain_uuid;
+        pass
+
+    def setDomainId(self, domain_id):
+        self.domain_id = domain_id;
+
+    def getInsertCommand(self):
+        return (self.uuid, self.name, self.desc, self.key, self.url, self.status, self.created, self.updated, self.domain_id);
+
 class StoryDatabase():
     def __init__(self, path: str|None = None):
         self.database_path = (path and ((path[:4] == 'file' and path[7:]) or path)) or './database/stories.db';
@@ -185,76 +239,76 @@ class StoryDatabase():
         conn.row_factory = dict_factory_pure;
         cursor = conn.cursor();
         
-        existing_stories, ext_stories_map = self.get_existing_by_uuids(cursor, ext_stories, 'story', ['type']);
-        existing_domains, ext_domains_map = self.get_existing_by_uuids(cursor, ext_domains, 'domain', ['key', 'domain']);
-        existing_chapters, _ = self.get_existing_by_uuids(cursor, ext_chapters, 'chapter', ['key']);
+        existing_stories, ext_stories_map = self.get_existing_stories_by_uuids(cursor, ext_stories);
+        existing_domains, ext_domains_map = self.get_existing_domains_by_uuids(cursor, ext_domains);
+        existing_chapters, _ = self.get_existing_chapters_by_uuids(cursor, ext_chapters);
         
         # Get all missing stories, domains and chapters
-        missing_story_commands: list[Tuple[uuid.UUID, str, str, int, float, str]] = [];
-        missing_domains: list[Tuple[str, Tuple[uuid.UUID, str, str, int]]] = [];
-        missing_chapters: list[Tuple[str, Tuple[uuid.UUID, str, str, str, str, int, datetime, datetime, int]]] = [];
+        missing_story_commands: list[StoryDbo] = [];
+        missing_domains: list[DomainDbo] = [];
+        missing_chapters: list[ChapterDbo] = [];
         # Get all updated stories, domains and chapters
-        updated_story_commands: list[Tuple[float, str, int]] = [];
+        updated_story_commands: list[StoryDbo] = [];
         updated_chapters = [];
 
         for ext_chapter in ext_chapters:
             existing_chapter = existing_chapters.get(ext_chapter['uuid']);
             if not existing_chapter:
                 ext_domain = ext_domains_map[ext_chapter['domain_id']];
-                ext_story = ext_stories_map[ext_domain['story_id']];
-                existing_domain = existing_domains.get(ext_domain['uuid']) or next((x for x in missing_domains if x[1][0] == ext_domain['uuid']), None);
-                if not existing_domain and not next((x for x in missing_domains if x[0] == ext_domain['uuid']), None):
-                    existing_story = existing_stories.get(ext_story['uuid']) or next((x for x in missing_story_commands if x[0] == ext_story['uuid']), None);
-                    if not existing_story and not next((x for x in missing_story_commands if x[0] == uuid.UUID(bytes_le=ext_story['uuid'])), None):
-                        missing_story_commands.append((uuid.UUID(bytes_le=ext_story['uuid']), self.esc_quotes(ext_story['name']), self.esc_quotes(ext_story['desc']), ext_story['type'], ext_story['rating'], ext_story['tags']));
-                    missing_domains.append((ext_story['uuid'], (uuid.UUID(bytes_le=ext_domain['uuid']), ext_domain['key'], ext_domain['domain'], existing_story['id'] if existing_story else 0)));
-                missing_chapters.append((ext_domain['uuid'], (uuid.UUID(bytes_le=ext_chapter['uuid']), self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(ext_chapter['url']), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain['id'] if existing_domain else 0)));
+                ext_story = ext_stories_map[ext_domain.story_id];
+                existing_domain = existing_domains.get(ext_domain.uuid) or next((x for x in missing_domains if x.uuid == ext_domain.uuid), None);
+                if not existing_domain and not next((x for x in missing_domains if x.uuid == ext_domain.uuid), None):
+                    existing_story = existing_stories.get(ext_story.uuid) or next((x for x in missing_story_commands if x.uuid == ext_story.uuid), None);
+                    if not existing_story and not next((x for x in missing_story_commands if x.uuid == ext_story.uuid), None):
+                        missing_story_commands.append(StoryDbo(None, ext_story.uuid, self.esc_quotes(ext_story.name), self.esc_quotes(ext_story.desc), ext_story.type, ext_story.rating, ext_story.tags));
+                    missing_domains.append(DomainDbo(None, ext_domain.uuid, ext_domain.key, ext_domain.domain, existing_story and existing_story.id or 0, ext_story.uuid));
+                missing_chapters.append(ChapterDbo(None, ext_chapter['uuid'], self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(ext_chapter['url']), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain and existing_domain.id or 0, ext_domain.uuid));
             else:
                 ext_domain = ext_domains_map[ext_chapter['domain_id']];
-                ext_story = ext_stories_map[ext_domain['story_id']];
-                existing_domain = existing_domains.get(ext_domain['uuid']) or next((x for x in missing_domains if x[1][0] == ext_domain['uuid']), None);
-                existing_story = existing_stories.get(ext_story['uuid']) or next((x for x in missing_story_commands if x[0] == ext_story['uuid']), None);
-                updated = existing_chapter['updated'] if not ext_chapter['updated'] or (existing_chapter['updated'] and existing_chapter['updated'] > ext_chapter['updated']) else ext_chapter['updated'];
-                status = ReadingStatus.COMPLETED if existing_chapter['status'] == ReadingStatus.COMPLETED else ext_chapter['status'];
-                if existing_chapter['updated'] != updated or existing_chapter['status'] != status:
-                    updated_chapters.append([status, updated, existing_chapter['id']]);
-                if next((x for x in updated_story_commands if x['id'] != existing_story['id']), None):
-                    rating = existing_story['rating'] if ext_story['rating'] != existing_story['rating'] and (existing_story['rating'] == 0 or existing_story['rating'] == None) else ext_story['rating'];
-                    tags = " ".join(self.unique(ext_story['tags'].split(' ') + existing_story['tags'].split(' ')))
-                    if existing_story['rating'] != rating or existing_story['tags'] != tags:
-                        updated_story_commands.append([rating, tags, existing_story['id']]);
+                ext_story = ext_stories_map[ext_domain.story_id];
+                existing_domain = existing_domains.get(ext_domain.uuid) or next((x for x in missing_domains if x.uuid == ext_domain.uuid), None);
+                existing_story = existing_stories.get(ext_story.uuid) or next((x for x in missing_story_commands if x.uuid == ext_story.uuid), None);
+                updated = existing_chapter.updated if not ext_chapter['updated'] or (existing_chapter.updated and existing_chapter.updated > ext_chapter['updated']) else ext_chapter['updated'];
+                status = ReadingStatus.COMPLETED if existing_chapter.status == ReadingStatus.COMPLETED else ext_chapter['status'];
+                if existing_chapter.updated != updated or existing_chapter.status != status:
+                    updated_chapters.append([status, updated, existing_chapter.id]);
+                if next((x for x in updated_story_commands if x.id != (existing_story and existing_story.id or 0)), None):
+                    rating = existing_story and existing_story.rating or 0 if (existing_story and ext_story.rating != existing_story.rating and (existing_story.rating == 0 or existing_story.rating == None)) else ext_story.rating;
+                    tags = " ".join(self.unique(ext_story.tags.split(' ') + ((existing_story and existing_story.tags.split(' ')) or [])))
+                    if existing_story and (existing_story.rating != rating or existing_story.tags != tags):
+                        updated_story_commands.append(StoryDbo(existing_story.id, existing_story.uuid, existing_story.name, existing_story.desc, existing_story.type, rating, tags));
         
         if len(updated_chapters) > 0:
             cursor.executemany("UPDATE chapter SET status=?, updated=? WHERE id=?", updated_chapters);
         if len(updated_story_commands) > 0:
-            cursor.executemany("UPDATE story SET rating=?, tags=? WHERE id=?", updated_story_commands);
+            cursor.executemany("UPDATE story SET rating=?, tags=? WHERE id=?", [x.getUpdateCommand() for x in updated_story_commands]);
 
         
         # Create all missing stories, domains and chapters
         created_stories = [];
         last_story_id = cursor.execute("SELECT max(id) from story").fetchone()['max(id)'];
-        cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", missing_story_commands);
+        cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", [x.getInsertCommand() for x in missing_story_commands]);
         created_stories = cursor.execute("SELECT id,uuid,name FROM story WHERE id > ? ORDER BY id ASC", (last_story_id,)).fetchall();
 
         for missing_domain in missing_domains:
             for created_story in created_stories:
-                if missing_domain[0] == created_story['uuid']:
-                    missing_domain[1][-1] = created_story['id'];
+                if missing_domain.story_uuid == created_story['uuid']:
+                    missing_domain.setStoryId(created_story['id']);
                     break;
         
         last_domain_id = cursor.execute("SELECT max(id) from domain").fetchone()['max(id)'];
-        commands = [x[1] for x in missing_domains];
+        commands = [x.getInsertCommand() for x in missing_domains];
         cursor.executemany("INSERT INTO domain (uuid,key,domain,story_id) VALUES (?,?,?,?)", commands);
         created_domains = cursor.execute(f"SELECT id,uuid,domain,key FROM domain WHERE id > {last_domain_id} ORDER BY id ASC").fetchall();
 
         for missing_chapter in missing_chapters:
             for created_domain in created_domains:
-                if missing_chapter[0] == created_domain['uuid']:
-                    missing_chapter[1][-1] = created_domain['id'];
+                if missing_chapter.domain_uuid == created_domain['uuid']:
+                    missing_chapter.setDomainId(created_domain['id']);
                     break;
         
         last_chapter_id = cursor.execute("SELECT max(id) from chapter").fetchone()['max(id)'];
-        commands = [x[1] for x in missing_chapters];
+        commands = [x.getInsertCommand() for x in missing_chapters];
         cursor.executemany("INSERT INTO chapter (uuid,name,desc,key,url,status,created,updated,domain_id) VALUES (?,?,?,?,?,?,?,?,?)", commands);
         created_chapters = cursor.execute(f"SELECT chapter.id,chapter.uuid,chapter.name,chapter.key,domain.id as d_id,domain.domain as d_name,domain.key as d_key,story.id as s_id,story.name as s_name FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id LEFT JOIN story ON story.id = domain.story_id WHERE chapter.id > {last_chapter_id} ORDER BY chapter.id ASC").fetchall();
 
@@ -277,19 +331,43 @@ class StoryDatabase():
                 return next_uuid;
         raise Exception("Attempt to get unique identifier failed");
 
+    def get_existing_stories_by_uuids(self, cursor: sqlite3.Cursor, elements: list[dict[str, Any]]) -> Tuple[dict[uuid.UUID, StoryDbo], dict[int, StoryDbo]]:
+        existing_stories, ext_stories_map = self.get_existing_by_uuids(cursor, elements, 'story', ['type']);
+        new_existing_stories: dict[uuid.UUID, StoryDbo] = {};
+        new_ext_stories_map: dict[int, StoryDbo] = {};
+        for value in existing_stories.values(): new_existing_stories[value['uuid']] = StoryDbo(value['id'], value['uuid'], value['name'], value['desc'], value['type'], value['rating'], value['tags']);
+        for value in ext_stories_map.values(): new_ext_stories_map[value['id']] = StoryDbo(value['id'], value['uuid'], value['name'], value['desc'], value['type'], value['rating'], value['tags']);
+        return new_existing_stories, new_ext_stories_map;
+
+    def get_existing_domains_by_uuids(self, cursor: sqlite3.Cursor, elements: list[dict[str, Any]]) -> Tuple[dict[uuid.UUID, DomainDbo], dict[int, DomainDbo]]:
+        existing_domains, ext_domains_map = self.get_existing_by_uuids(cursor, elements, 'domain', ['key', 'domain']);
+        new_existing_domains: dict[uuid.UUID, DomainDbo] = {};
+        new_ext_domains_map: dict[int, DomainDbo] = {};
+        for value in existing_domains.values(): new_existing_domains[value['uuid']] = DomainDbo(value['id'], value['uuid'], value['key'], value['domain'], value['story_id']);
+        for value in ext_domains_map.values(): new_ext_domains_map[value['id']] = DomainDbo(value['id'], value['uuid'], value['key'], value['domain'], value['story_id']);
+        return new_existing_domains, new_ext_domains_map;
+
+    def get_existing_chapters_by_uuids(self, cursor: sqlite3.Cursor, elements: list[dict[str, Any]]) -> Tuple[dict[uuid.UUID, ChapterDbo], dict[int, ChapterDbo]]:
+        existing_chapters, ext_chapters_map = self.get_existing_by_uuids(cursor, elements, 'chapter', ['key']);
+        new_existing_chapters: dict[uuid.UUID, ChapterDbo] = {};
+        new_ext_chapters_map: dict[int, ChapterDbo] = {};
+        for value in existing_chapters.values(): new_existing_chapters[value['uuid']] = ChapterDbo(value['id'], value['uuid'], value['name'], value['desc'], value['key'], value['url'], value['status'], value['created'], value['updated'], value['domain_id']);
+        for value in ext_chapters_map.values(): new_ext_chapters_map[value['id']] = ChapterDbo(value['id'], value['uuid'], value['name'], value['desc'], value['key'], value['url'], value['status'], value['created'], value['updated'], value['domain_id']);
+        return new_existing_chapters, new_ext_chapters_map;
+
     def get_existing_by_uuids(self, cursor: sqlite3.Cursor, elements: list[dict[str, Any]], table: str, keys: list[str]) -> Tuple[dict, dict]:
         uuids = [x['uuid'] for x in elements];
         sql=f"select * FROM {table} WHERE uuid IN ({','.join(['?']*len(uuids))})";
         existing_stories = cursor.execute(sql, uuids).fetchall();
         return self.existing_has_property(existing_stories, elements, keys, table);
 
-    def existing_has_property(self, exists: dict[str, Any], elements: dict[str, Any], properties: list[str], table: str) -> Tuple[dict[str, Any], dict[int, Any]]:
-        exist_dict = {};
-        element_dict = {};
+    def existing_has_property(self, exists: list[dict[str, Any]], elements: list[dict[str, Any]], properties: list[str], table: str) -> Tuple[dict[str, Any], dict[int, Any]]:
+        exist_dict: dict[str, Any] = {};
+        element_dict: dict[int, Any] = {};
         for exist in exists:
             exist_dict[exist['uuid']] = exist;
         for element in elements:
-            exist = exist_dict.get(element['uuid']);
+            exist = exist_dict.get(element['uuid'], None);
             if exist and not all([element[prop] == exist[prop] for prop in properties]):
                 print(f"WARNING: {table} with uuid:{uuid.UUID(bytes_le=element['uuid'])} was found with id:{element['id']}, but with a mismatch {[f'{prop}: {exist[prop]} != {element[prop]}' for prop in properties]}, so if was not seen as existing");
                 continue;
