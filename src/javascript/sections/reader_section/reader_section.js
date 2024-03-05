@@ -97,7 +97,9 @@ onClick([
         mode: "open-multiple", // open
         path: URL.toPath(__DIR__ + "../../Novels/Stories"),
       });
-      if (fileNames.length > 0) {
+      if (!Array.isArray(fileNames) && fileNames) {
+        loadMarkdown([fileNames]);
+      } else if (Array.isArray(fileNames) && fileNames.length > 1) {
         loadMarkdown(fileNames);
       }
     },
