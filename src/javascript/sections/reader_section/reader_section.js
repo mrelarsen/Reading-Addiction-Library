@@ -64,8 +64,9 @@ const md = new Remarkable({ html: true });
 md.use(HeaderIds({ anchorText: " " }));
 
 function loadMarkdown(hrefs) {
+  callReader("read_list", hrefs);
   hrefs = hrefs.map((href) => URL.fromPath(href));
-  load(hrefs);
+  // load(hrefs);
 }
 
 async function load(hrefs) {

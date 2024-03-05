@@ -1,6 +1,7 @@
+import requests
 from selectolax.parser import HTMLParser, Node
 from helpers.story_type import StoryType
-from scrape.basic_scraper import BasicScraper;
+from helpers.driver import Driver
 from scrape.basic_file_scraper import BasicFileScraper;
 from scrape.basic_scraper import ScraperResult, KeyResult, UrlResult;
 # from epub import open_epub
@@ -9,7 +10,7 @@ from lxml import etree;
 import os;
 
 class FileScraper(BasicFileScraper):
-    def __init__(self, url: str, driver):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         super().__init__(url);
 
     def _try_read_file(self, path: str):
@@ -94,3 +95,6 @@ class FileScraper(BasicFileScraper):
         dict['zip_content'] = zip_content;
             
         return dict;
+    
+    def get_configuration(self) -> FileConfiguration:
+        return None;

@@ -1,4 +1,5 @@
 import importlib
+import os
 import re
 from types import ModuleType
 import requests
@@ -166,9 +167,20 @@ class QueueWorker():
 
     def __get_module_name(self, scrape_url: str):
         if scrape_url.startswith("file"):
-            url = scrape_url[8:];
-            file_domain = re.split(r'[\\/]', scrape_url)[-1].split('__')[0];
-            modulename = f"file_{file_domain}";
+            url = ''
+            if scrape_url.startswith("file:///"): url = scrape_url[8:];
+            elif scrape_url.startswith("file://"): url = scrape_url[7:];
+            modulename = '';
+            route_head = re.split(r'[\\/]', scrape_url)[-1];
+            if '__' in route_head:
+                file_domain = route_head.split('__')[0];
+                modulename = f"file_{file_domain}";
+            else: 
+                file_name, ext = os.path.splitext(route_head);
+                if ext == ".md":
+                    modulename = 'file_markdown';
+                elif ext == ".epub":
+                    modulename = 'file_epub';
             return (modulename, url);
         elif scrape_url.startswith("http"):
             split_domain = scrape_url.split('/')[2].split('.');
