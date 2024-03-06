@@ -38,7 +38,7 @@ class StoryDbo():
         return (self.uuid, self.name or '', self.desc or '', self.type or 0, self.rating or 0, self.tags or '');
 
     def getUpdateCommand(self):
-        return (self.rating or '', self.tags or '', self.id);
+        return (self.rating or 0, self.tags or '', self.id);
 
 class DomainDbo():
     def __init__(self, id: int | None, uuid: uuid.UUID, key: str, domain: str, story_id: int, story_uuid: uuid.UUID|None = None):
