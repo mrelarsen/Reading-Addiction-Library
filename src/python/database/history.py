@@ -30,13 +30,15 @@ class History():
 
     def merge_stories(self, from_story_ids: list[int], to_story_id: int):
         self.db.merge_stories(from_story_ids, to_story_id);
-
+    
     def merge_database(self, database_path: str):
         merging_db = StoryDatabase(database_path);
         stories = merging_db.get_stories(pure=True);
         domains = merging_db.get_domains(pure=True);
+        unique_domains, domain_id_map = self.__unique_domains(domains);
         chapters = merging_db.get_chapters(story_id=None, pure=True);
-        created_stories, created_domains, created_chapters = self.db.create_chapters_from_entities(stories, domains, chapters);
+        unique_chapters = self.__unique_chapters(chapters, domain_id_map);
+        created_stories, created_domains, created_chapters = self.db.create_chapters_from_entities(stories, unique_domains, unique_chapters);
         story_map = {};
         for created_chapter in created_chapters:
             s_id = created_chapter['s_id'];
@@ -64,5 +66,22 @@ class History():
                 for chapter_id in story_map[story_id][domain_id]:
                     if chapter_id == 'name': continue;
                     created_chapter = story_map[story_id][domain_id][chapter_id];
-                    print(f"New Chapter: {created_chapter['name']}")
+                    print(f"New Chapter: {created_chapter['name']}");
+    
+    def __unique_domains(self, domain_list: list[dict]):
+        unique_list = [];
+        map = {};
+        for domain in domain_list:
+            existing = next((x for x in unique_list if x['key'] == domain['key'] and x['domain'] == domain['domain']), None);
+            if not existing: unique_list.append(domain);
+            else: map[domain['id']] = existing['id'];
+        return unique_list, map;
+    
+    def __unique_chapters(self, chapter_list: list[dict], domain_id_map: dict[int, int]):
+        unique_list = [];
+        for chapter in chapter_list:
+            if chapter['domain_id'] in domain_id_map: chapter['domain_id'] = domain_id_map[chapter['domain_id']];
+            if not next((x for x in unique_list if x['key'] == chapter['key'] and x['domain_id'] == chapter['domain_id']), None):
+                unique_list.append(chapter);
+        return unique_list;
 

@@ -35,10 +35,10 @@ class StoryDbo():
         pass
 
     def getInsertCommand(self):
-        return (self.uuid, self.name, self.desc, self.type, self.rating, self.tags);
+        return (self.uuid, self.name or '', self.desc or '', self.type or 0, self.rating or 0, self.tags or '');
 
     def getUpdateCommand(self):
-        return (self.rating, self.tags, self.id);
+        return (self.rating or '', self.tags or '', self.id);
 
 class DomainDbo():
     def __init__(self, id: int | None, uuid: uuid.UUID, key: str, domain: str, story_id: int, story_uuid: uuid.UUID|None = None):
@@ -54,7 +54,7 @@ class DomainDbo():
         self.story_id = story_id;
 
     def getInsertCommand(self):
-        return (self.uuid, self.key, self.domain, self.story_id);
+        return (self.uuid, self.key or '', self.domain or '', self.story_id);
 
 class ChapterDbo():
     def __init__(self, id: int | None, uuid: uuid.UUID, name: str, desc: str, key: str, url: str, status: int, created: datetime, updated: datetime, domain_id: int, domain_uuid: uuid.UUID|None = None):
@@ -75,7 +75,7 @@ class ChapterDbo():
         self.domain_id = domain_id;
 
     def getInsertCommand(self):
-        return (self.uuid, self.name, self.desc, self.key, self.url, self.status, self.created, self.updated, self.domain_id);
+        return (self.uuid, self.name or '', self.desc or '', self.key or '', self.url or '', self.status or 0, self.created, self.updated, self.domain_id);
 
 class StoryDatabase():
     def __init__(self, path: str|None = None):
@@ -286,7 +286,7 @@ class StoryDatabase():
         
         # Create all missing stories, domains and chapters
         created_stories = [];
-        last_story_id = cursor.execute("SELECT max(id) from story").fetchone()['max(id)'];
+        last_story_id = cursor.execute("SELECT max(id) from story").fetchone()['max(id)'] or 0;
         cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", [x.getInsertCommand() for x in missing_story_commands]);
         created_stories = cursor.execute("SELECT id,uuid,name FROM story WHERE id > ? ORDER BY id ASC", (last_story_id,)).fetchall();
 
@@ -296,7 +296,7 @@ class StoryDatabase():
                     missing_domain.setStoryId(created_story['id']);
                     break;
         
-        last_domain_id = cursor.execute("SELECT max(id) from domain").fetchone()['max(id)'];
+        last_domain_id = cursor.execute("SELECT max(id) from domain").fetchone()['max(id)'] or 0;
         commands = [x.getInsertCommand() for x in missing_domains];
         cursor.executemany("INSERT INTO domain (uuid,key,domain,story_id) VALUES (?,?,?,?)", commands);
         created_domains = cursor.execute(f"SELECT id,uuid,domain,key FROM domain WHERE id > {last_domain_id} ORDER BY id ASC").fetchall();
@@ -307,7 +307,7 @@ class StoryDatabase():
                     missing_chapter.setDomainId(created_domain['id']);
                     break;
         
-        last_chapter_id = cursor.execute("SELECT max(id) from chapter").fetchone()['max(id)'];
+        last_chapter_id = cursor.execute("SELECT max(id) from chapter").fetchone()['max(id)'] or 0;
         commands = [x.getInsertCommand() for x in missing_chapters];
         cursor.executemany("INSERT INTO chapter (uuid,name,desc,key,url,status,created,updated,domain_id) VALUES (?,?,?,?,?,?,?,?,?)", commands);
         created_chapters = cursor.execute(f"SELECT chapter.id,chapter.uuid,chapter.name,chapter.key,domain.id as d_id,domain.domain as d_name,domain.key as d_key,story.id as s_id,story.name as s_name FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id LEFT JOIN story ON story.id = domain.story_id WHERE chapter.id > {last_chapter_id} ORDER BY chapter.id ASC").fetchall();
