@@ -424,7 +424,7 @@ class ReaderEventHandler():
         word = current_line[word_end-length:word_end];
         highlighted = f'{htmlParser.escape(current_line[len(self.get_line_prefix()):word_end-length])}<span style="background-color:#555;color:#f1f1f1">{htmlParser.escape(word)}</span>{htmlParser.escape(current_line[word_end:-7])}';
         if self.element:
-            self.call_javascript('replaceId', [f"line-{self.line_number:05}", htmlParser.unescape(highlighted)]);
+            self.call_javascript('replaceId', [f"line-{self.line_number:05}", highlighted]);
 
     def set_pause_label(self, pause: bool):
         self.element.find_first('#rdr_btn_pause').text = 'Resume' if pause else 'Pause';

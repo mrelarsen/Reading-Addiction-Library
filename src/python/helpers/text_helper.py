@@ -64,6 +64,14 @@ class TextHelper():
         if node.tag == 'script':
             node.remove();
         elif node.tag != '-text':
+            children = TextHelper.__get_children(node);
+            # restrict size of lone image in p tag 
+            if node.tag == 'p' and node.parent != None and node.text(strip=True) == '' and len(children) == 1 and children[0].tag == 'img':
+                src = children[0].attributes.get("src");
+                p_img_replacement = HTMLParser(f'<div style="width:*;"><img style="max-width: 80%; display: block;  margin-left: auto;  margin-right: auto;" src="{src}"></div>').body.child;
+                node.insert_after(p_img_replacement);
+                node.remove();
+                return;
             # remove display style in case of inline tags
             if node.tag == 'img' and node.parent.text(strip=True) == '' and node.parent.tag in TextHelper.__get_inline_tags():
                 if 'style' in node.attributes and cssutils_spec:
@@ -81,22 +89,6 @@ class TextHelper():
             
             children = TextHelper.__split_p(node, children);
 
-            # if (node.tag == 'div' and all(x for x in children if x.tag == '-text')):
-            #     next_children = [];
-            #     for child in children:
-            #         cleaned_node = child.html and self.clean_textnode(child);
-            #         if not cleaned_node: continue;
-            #         cleaned_children = self.get_children(cleaned_node);
-            #         if (len(cleaned_children) == 1):
-            #             cleaned_child = HTMLParser(f'<p>{cleaned_children[0].html}</p>').body.child;
-            #             next_children.append(cleaned_child);
-            #         else:
-            #             next_children.extend(cleaned_children);
-            #     if (len(next_children) > 1):
-            #         for next_child in next_children:
-            #             node.insert_after(next_child);
-            #         node.remove();
-            # else:
             for child in children:
                 TextHelper.__clean_node(child, parser, depth + 1, padding);
         elif text.strip() != "" and node.parent != None:

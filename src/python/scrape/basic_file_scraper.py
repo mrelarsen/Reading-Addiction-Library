@@ -6,12 +6,13 @@ from helpers.scraper_result import KeyResult, UrlResult;
 from scrape.basic_scraper import BasicScraper, ScraperResult;
 
 class FileConfiguration():
-    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_titles: Callable[[Node], Node], get_keys: Callable[[Node, int], Any], get_chapter: Callable[[Node, int], Node], src: Optional[str] = None):
+    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_titles: Callable[[Node], list[Node]], get_story_title: Callable[[Node], Node], get_keys: Callable[[Node, int], Any], get_chapter: Callable[[Node, int], Node], src: Optional[str] = None):
         self.get_story_type = get_story_type;
         self.src = src;
         self.get_chapter = get_chapter;
         self.get_titles = get_titles;
         self.get_keys = get_keys;
+        self.get_story_title = get_story_title;
         pass
 
 class BasicFileScraper(BasicScraper):
@@ -36,6 +37,7 @@ class BasicFileScraper(BasicScraper):
         id = int(self._url.split('_')[-1]);
         chapter = self._configuration.get_chapter(body, id);
         chapter_titles = self._configuration.get_titles(body);
+        story_title = self._configuration.get_story_title(body);
         keys = self._configuration.get_keys(body, self._url.split('/'));
         return ScraperResult(
             story_type=self._configuration.get_story_type(body, self._url.split('/')),
@@ -49,7 +51,7 @@ class BasicFileScraper(BasicScraper):
             titles = KeyResult(
                 chapter = chapter_titles[id - 1].text(),
                 domain = None,
-                story = None,
+                story = story_title and story_title.text() or None,
             ),
             keys = KeyResult(
                 story = keys.story,

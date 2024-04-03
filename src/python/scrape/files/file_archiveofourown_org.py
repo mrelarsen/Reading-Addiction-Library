@@ -13,6 +13,7 @@ class FileScraper(BasicFileScraper):
             get_story_type=lambda x,y: StoryType.NOVEL,
             get_chapter=lambda body,id: body.css(f'#chapters .userstuff')[id-1],
             get_titles=lambda body: body.css('#chapters h2.heading'),
+            get_story_title=lambda body: None, # TODO: find title
             get_keys=lambda body, id: self.Object(
                 story = body.css('#preface .message a')[1].attributes['href'].split('/')[-1],
                 chapter = id,

@@ -1,4 +1,4 @@
-import sqlite3, uuid
+import sqlite3, uuid, os
 from typing import Any, Tuple;
 from datetime import datetime
 from helpers.reading_status import ReadingStatus
@@ -14,14 +14,20 @@ def dict_factory(cursor: sqlite3.Cursor, row: Any):
             d[col[0]] = str(uuid.UUID(bytes_le=row[idx]));
         elif col[0] == 'status':
             d[col[0]] = ReadingStatus(row[idx]).name.lower().replace('_', ' ');
+        elif col[0] == 'url':
+            d[col[0]] = row[idx].replace('{environment_path}', os.path.abspath('./'));
         else:
             d[col[0]] = row[idx];
-    return d
+    return d;
+
 def dict_factory_pure(cursor: sqlite3.Cursor, row: Any):
     d = {}
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx];
     return d
+
+def replace_environmental_path(text: str):
+    return text.replace(os.path.abspath('./'), '{environment_path}');
 
 class StoryDbo():
     def __init__(self, id: int | None, uuid: uuid.UUID, name: str, desc: str, type: int, rating: float, tags: str):
@@ -147,7 +153,7 @@ class StoryDatabase():
         chapter_id = None;
         if not chapter:
             chapter_uuid = self.get_unique_identifier(cursor, "chapter");
-            cursor.execute(f"""INSERT INTO chapter (uuid,name,desc,key,url,status,created,domain_id) VALUES (?, "{self.esc_quotes(result.titles.chapter)}", "", "{result.keys.chapter}", "{self.esc_quotes(result.urls.current)}", ?, ?, ?)""",
+            cursor.execute(f"""INSERT INTO chapter (uuid,name,desc,key,url,status,created,domain_id) VALUES (?, "{self.esc_quotes(result.titles.chapter)}", "", "{result.keys.chapter}", "{self.esc_quotes(replace_environmental_path(result.urls.current))}", ?, ?, ?)""",
                 (chapter_uuid, status.value, datetime.now(), domain_id,));
             chapter_id = cursor.lastrowid;
         else:
@@ -262,7 +268,7 @@ class StoryDatabase():
                     if not existing_story and not next((x for x in missing_story_commands if x.uuid == ext_story.uuid), None):
                         missing_story_commands.append(StoryDbo(None, ext_story.uuid, self.esc_quotes(ext_story.name), self.esc_quotes(ext_story.desc), ext_story.type, ext_story.rating, ext_story.tags));
                     missing_domains.append(DomainDbo(None, ext_domain.uuid, ext_domain.key, ext_domain.domain, existing_story and existing_story.id or 0, ext_story.uuid));
-                missing_chapters.append(ChapterDbo(None, ext_chapter['uuid'], self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(ext_chapter['url']), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain and existing_domain.id or 0, ext_domain.uuid));
+                missing_chapters.append(ChapterDbo(None, ext_chapter['uuid'], self.esc_quotes(ext_chapter['name']), self.esc_quotes(ext_chapter['desc']), ext_chapter['key'], self.esc_quotes(replace_environmental_path(ext_chapter['url'])), ext_chapter['status'], ext_chapter['created'], ext_chapter['updated'], existing_domain and existing_domain.id or 0, ext_domain.uuid));
             else:
                 ext_domain = ext_domains_map[ext_chapter['domain_id']];
                 ext_story = ext_stories_map[ext_domain.story_id];
@@ -287,8 +293,14 @@ class StoryDatabase():
         # Create all missing stories, domains and chapters
         created_stories = [];
         last_story_id = cursor.execute("SELECT max(id) from story").fetchone()['max(id)'] or 0;
-        cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", [x.getInsertCommand() for x in missing_story_commands]);
+        commands = [x.getInsertCommand() for x in missing_story_commands];
+        counter = 0;
+        increment = 500;
+        while counter < len(commands):
+            cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", commands[counter: min(counter+increment, len(commands))]);
+            counter += increment;
         created_stories = cursor.execute("SELECT id,uuid,name FROM story WHERE id > ? ORDER BY id ASC", (last_story_id,)).fetchall();
+        
 
         for missing_domain in missing_domains:
             for created_story in created_stories:
@@ -298,7 +310,10 @@ class StoryDatabase():
         
         last_domain_id = cursor.execute("SELECT max(id) from domain").fetchone()['max(id)'] or 0;
         commands = [x.getInsertCommand() for x in missing_domains];
-        cursor.executemany("INSERT INTO domain (uuid,key,domain,story_id) VALUES (?,?,?,?)", commands);
+        counter = 0;
+        while counter < len(commands):
+            cursor.executemany("INSERT INTO domain (uuid,key,domain,story_id) VALUES (?,?,?,?)", commands[counter: min(counter+increment, len(commands))]);
+            counter += increment;
         created_domains = cursor.execute(f"SELECT id,uuid,domain,key FROM domain WHERE id > {last_domain_id} ORDER BY id ASC").fetchall();
 
         for missing_chapter in missing_chapters:
@@ -309,7 +324,10 @@ class StoryDatabase():
         
         last_chapter_id = cursor.execute("SELECT max(id) from chapter").fetchone()['max(id)'] or 0;
         commands = [x.getInsertCommand() for x in missing_chapters];
-        cursor.executemany("INSERT INTO chapter (uuid,name,desc,key,url,status,created,updated,domain_id) VALUES (?,?,?,?,?,?,?,?,?)", commands);
+        counter = 0;
+        while counter < len(commands):
+            cursor.executemany("INSERT INTO chapter (uuid,name,desc,key,url,status,created,updated,domain_id) VALUES (?,?,?,?,?,?,?,?,?)", commands[counter: min(counter+increment, len(commands))]);
+            counter += increment;
         created_chapters = cursor.execute(f"SELECT chapter.id,chapter.uuid,chapter.name,chapter.key,domain.id as d_id,domain.domain as d_name,domain.key as d_key,story.id as s_id,story.name as s_name FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id LEFT JOIN story ON story.id = domain.story_id WHERE chapter.id > {last_chapter_id} ORDER BY chapter.id ASC").fetchall();
 
         conn.commit();
@@ -357,8 +375,14 @@ class StoryDatabase():
 
     def get_existing_by_uuids(self, cursor: sqlite3.Cursor, elements: list[dict[str, Any]], table: str, keys: list[str]) -> Tuple[dict, dict]:
         uuids = [x['uuid'] for x in elements];
-        sql=f"select * FROM {table} WHERE uuid IN ({','.join(['?']*len(uuids))})";
-        existing_stories = cursor.execute(sql, uuids).fetchall();
+        counter = 0;
+        increment = 500;
+        existing_stories: list[dict] = [];
+        while counter < len(uuids):
+            sub_list = uuids[counter: min(counter+increment, len(uuids))];
+            sql=f"select * FROM {table} WHERE uuid IN ({','.join(['?']*len(sub_list))})";
+            existing_stories = existing_stories + cursor.execute(sql, sub_list).fetchall();
+            counter += increment;
         return self.existing_has_property(existing_stories, elements, keys, table);
 
     def existing_has_property(self, exists: list[dict[str, Any]], elements: list[dict[str, Any]], properties: list[str], table: str) -> Tuple[dict[str, Any], dict[int, Any]]:

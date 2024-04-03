@@ -17,4 +17,5 @@ class FileScraper(BasicFileScraper):
                 chapter = id,
             ),
             get_titles=lambda body: body.css('#contents-list a'),
+            get_story_title=lambda body: body.css_first('h1 .title'),
         );
