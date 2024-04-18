@@ -25,17 +25,22 @@ export const chapterColumnMetadata = {
   created: {
     title: "Created",
     width: "4*",
-    visible: true,
     sortable: true,
   },
   updated: {
     title: "Updated",
     width: "4*",
     sortable: true,
-    displayValue: (item, col) =>
-      !item[col] || item[col].toString() == "None" ? "" : item[col],
-    sortValue: (item, col) =>
-      (item[col]?.toString() == "None" ? "" : item[col]) || "0000-00-00",
+    displayValue: (item, col) => item[col] || "",
+    sortValue: (item, col) => item[col] || "0000-00-00",
+  },
+  latest: {
+    title: "Latest",
+    width: "4*",
+    visible: true,
+    sortable: true,
+    displayValue: (item, col) => item["updated"] || item["created"],
+    sortValue: (item, col) => item["updated"] || item["created"],
   },
   status: {
     title: "Status",

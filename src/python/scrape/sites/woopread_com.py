@@ -6,6 +6,9 @@ from scrape.configure_site_scraper import ConfigureSiteScraper;
 from selectolax.parser import Node
 from helpers.scraper_result import KeyResult, UrlResult;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.NOVEL;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         super().useHtml(url);
@@ -15,7 +18,7 @@ class SiteScraper(ConfigureSiteScraper):
 
     def getConfiguration(self, url: str):
         return BasicConfiguration(
-            get_story_type = lambda node, sections: StoryType.NOVEL,
+            get_story_type = lambda node, sections: get_story_type(sections),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
             get_chapter = lambda node, sections: node.css_first('.reading-content'),

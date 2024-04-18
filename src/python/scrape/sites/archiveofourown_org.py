@@ -3,9 +3,13 @@ import re;
 import requests
 import html as htmlEncoder;
 from selectolax.parser import Node
+from helpers.story_type import StoryType
 from scrape.basic_scraper import ScraperResult;
 from helpers.driver import Driver;
 from scrape.configure_site_scraper import ConfigureSiteScraper;
+
+def get_story_type(sections) -> StoryType:
+    return StoryType.NOVEL;
 
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):

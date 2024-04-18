@@ -6,6 +6,9 @@ from scrape.configure_site_scraper import ConfigureSiteScraper;
 from selectolax.parser import Node
 from helpers.scraper_result import KeyResult, UrlResult;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.MANGA;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
@@ -16,7 +19,7 @@ class SiteScraper(ConfigureSiteScraper):
     def getConfiguration(self, url: str):
         prefix = 'https://omegascans.org';
         return BasicConfiguration(
-            get_story_type = lambda node, sections: StoryType.MANGA,
+            get_story_type = lambda node, sections: get_story_type(sections),
             src = lambda node: node.attributes.get('data-src') or node.attributes.get('src'),
             get_chapter = lambda node, sections: node.css_first('.container > p.flex'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
@@ -38,7 +41,7 @@ class SiteScraper(ConfigureSiteScraper):
 
     def get_urls(self, node: Node, sections: list[str], url: str):
         prefix = 'https://omegascans.org';
-        prev = node.css('.container > div.flex > a')[1];
+        prev = node.css('.container > div.flex > a')[0];
         next = node.css('.container > div.flex > a')[-1];
         return UrlResult(
             prev = self.tryGetHref(prev, prefix, lambda element: len(element.attributes.get('href').split('/')) == 4),

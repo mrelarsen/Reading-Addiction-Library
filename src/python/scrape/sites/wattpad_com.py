@@ -1,11 +1,13 @@
 import requests;
 from helpers.story_type import StoryType
-from scrape.basic_scraper import BasicScraper
 from helpers.driver import Driver
 from scrape.basic_scraper import ScraperResult;
 from scrape.basic_site_scraper import BasicSiteScraper;
 from selectolax.parser import HTMLParser
 from helpers.scraper_result import KeyResult, UrlResult;
+
+def get_story_type(sections) -> StoryType:
+    return StoryType.NOVEL;
 
 class SiteScraper(BasicSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
@@ -31,7 +33,7 @@ class SiteScraper(BasicSiteScraper):
         sections = self._url.split('/');
         print(res.json())
         return ScraperResult(
-            story_type=StoryType.NOVEL,
+            story_type=get_story_type(sections),
             urls = UrlResult(
                 prev = "https://www.wattpad.com/" + str(chapters[chapter_index - 1]['ID']) if 0 < chapter_index - 1 else None,
                 current = self._url,

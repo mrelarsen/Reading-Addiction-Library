@@ -7,6 +7,9 @@ from scrape.basic_scraper import ScraperResult, KeyResult, UrlResult;
 import os;
 import markdown;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.NOVEL;
+
 class FileScraper(BasicFileScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         super().__init__(url);
@@ -22,7 +25,7 @@ class FileScraper(BasicFileScraper):
     def _scrape(self, body: Node):
         file_name, ext = os.path.splitext(self._url);
         return ScraperResult(
-            story_type=StoryType.NOVEL,
+            story_type=get_story_type(None),
             urls = UrlResult(
                 prev = None,
                 current = f"file:///{self._url}",

@@ -7,6 +7,9 @@ from helpers.driver import Driver
 from scrape.basic_scraper import BasicConfiguration;
 from scrape.configure_site_scraper import ConfigureSiteScraper;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.MANGA;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
@@ -35,7 +38,7 @@ class SiteScraper(ConfigureSiteScraper):
 
     def getConfiguration(self, url: str):
         return BasicConfiguration(
-            get_story_type = lambda node, sections: StoryType.MANGA,
+            get_story_type = lambda node, sections: get_story_type(sections),
             src = 'src',
             get_chapter = lambda node, sections: node.css_first('.reading-content'),
             get_titles = lambda node, sections: self.get_titles(node, sections),

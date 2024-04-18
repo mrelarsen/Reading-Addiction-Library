@@ -1,6 +1,10 @@
 import requests
 from helpers.driver import Driver
+from helpers.story_type import StoryType
 from scrape.mangas.asuratoon_com import SiteScraper as Asuratoon;
+
+def get_story_type(sections) -> StoryType:
+    return StoryType.MANGA;
 
 class SiteScraper(Asuratoon):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
@@ -15,7 +19,7 @@ class SiteScraper(Asuratoon):
         
 #     def getConfiguration(self, url: str):
 #         return BasicConfiguration(
-#             get_story_type = lambda node, sections: StoryType.MANGA,
+#             get_story_type = lambda node, sections: get_story_type(sections),
 #             src = 'src',
 #             get_chapter = lambda node, sections: node.css_first('#readerarea'),
 #             get_titles = lambda node, sections: self.get_titles(node, sections),

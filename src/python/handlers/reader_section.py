@@ -148,8 +148,8 @@ class ReaderEventHandler():
             story, key = self.scrape_service.get_story();
             if story or result.titles.story:
                 self.element.find_first('#rdr_lbl_story_title').text = (story and story.get('name')) or result.titles.story or '';
-            self.set_urls();
             self.scrape_service.try_to_save(ReadingStatus.READING);
+        self.set_urls();
         self.lineNumber = 0;
         self.scroll();
         if self.use_tts:

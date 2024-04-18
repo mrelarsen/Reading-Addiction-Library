@@ -170,8 +170,8 @@ class StoryDatabase():
         conn = sqlite3.connect(self.database_path);
         conn.row_factory = dict_factory_pure if pure else dict_factory;
         cursor = conn.cursor();
-        created_latest_chapter = "(SELECT chapter.created FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.created DESC LIMIT 1) AS created"
-        updated_latest_chapter = "(SELECT chapter.updated FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id and chapter.updated IS NOT NULL ORDER BY chapter.updated ASC LIMIT 1) AS updated"
+        created_latest_chapter = "(SELECT chapter.created FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.created ASC LIMIT 1) AS created"
+        updated_latest_chapter = "(SELECT chapter.updated FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.updated DESC LIMIT 1) AS updated"
         key_first_domain = "(SELECT key FROM domain WHERE story.id = domain.story_id LIMIT 1) AS key"
         if pure:
             cursor.execute(f"SELECT * FROM story; ");

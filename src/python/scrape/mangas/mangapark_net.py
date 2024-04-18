@@ -7,6 +7,9 @@ from selectolax.parser import HTMLParser, Node
 from scrape.configure_site_scraper import ConfigureSiteScraper;
 from helpers.scraper_result import KeyResult, UrlResult;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.MANGA;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
@@ -41,7 +44,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev_chapter_next_source = lambda: prev_chapters and next(x for x in prev_chapters if self.walk(x, 'data.lang') == lang);
         prev_chapter = prev_chapter_same_source() or prev_chapter_next_source();
         return ScraperResult(
-            story_type = StoryType.MANGA,
+            story_type = get_story_type(sections),
             urls = UrlResult(
                 prev = prefix + self.walk(prev_chapter, 'data.urlPath') if prev_chapter else None,
                 current = prefix + chapter_data['urlPath'],

@@ -20,15 +20,17 @@ class ConfigureSiteScraper(BasicSiteScraper):
 
     def useReDriver(self, url: str, driver: Driver, awaitTerm: str|None = None):
         if driver.get_usage() > 0:
-            self._result = ScraperResult._get_driver_requires_reset(url);
+            conf = self.getConfiguration(url);
+            self._result = ScraperResult._get_driver_requires_reset(url, conf.get_story_type());
         else:
             self.useDriver(url, driver, awaitTerm);
 
     def useDriver(self, url: str, driver: Driver, awaitTerm: str|None = None):
+        conf = self.getConfiguration(url);
         if not driver.is_running():
-            self._result = ScraperResult._get_driver_required(url);
+            self._result = ScraperResult._get_driver_required(url, conf.get_story_type());
         else:
-            super().__init__(url=url, driver=driver.get(), awaitTerm=awaitTerm, configuration=self.getConfiguration(url), headers=self.headers);
+            super().__init__(url=url, driver=driver.get(), awaitTerm=awaitTerm, configuration=conf, headers=self.headers);
 
     def useSession(self, url: str, session_dict: dict[str, requests.Session]):
         site_key = self.setupSession(url, session_dict)

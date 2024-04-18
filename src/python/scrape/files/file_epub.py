@@ -2,12 +2,15 @@ import requests
 from selectolax.parser import HTMLParser, Node
 from helpers.story_type import StoryType
 from helpers.driver import Driver
-from scrape.basic_file_scraper import BasicFileScraper;
+from scrape.basic_file_scraper import BasicFileScraper, FileConfiguration;
 from scrape.basic_scraper import ScraperResult, KeyResult, UrlResult;
 # from epub import open_epub
 import zipfile;
 from lxml import etree;
 import os;
+
+def get_story_type(sections) -> StoryType:
+    return StoryType.NOVEL;
 
 class FileScraper(BasicFileScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
@@ -30,7 +33,7 @@ class FileScraper(BasicFileScraper):
 
     def _scrape(self, body: Node):
         return ScraperResult(
-            story_type=StoryType.NOVEL,
+            story_type=get_story_type(None),
             urls = UrlResult(
                 prev = None,
                 current = f"file:///{self._url}",

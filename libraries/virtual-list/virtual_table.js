@@ -77,8 +77,8 @@ export class VirtualTable extends Element {
     );
   }
 
-  sortColumnAndUpdateList(headerElement) {
-    sortColumn(headerElement, this, this.columnMetadata);
+  sortColumnAndUpdateList(headerElement, order = undefined) {
+    sortColumn(headerElement, this, this.columnMetadata, order);
   }
 
   updateFilter(column, filter) {
@@ -344,9 +344,9 @@ class VirtualTableBody extends VirtualList {
   }
 }
 
-function sortColumn(headerElement, table, metadata) {
+function sortColumn(headerElement, table, metadata, order) {
   var name = headerElement["name"];
-  var order = headerElement["order"];
+  var headerOrder = headerElement["order"];
 
   function cmpascend(a, b) {
     return cmp(a, b, -1);
@@ -373,10 +373,10 @@ function sortColumn(headerElement, table, metadata) {
     return typeof value === "string" ? value.toLowerCase() : value;
   }
 
-  if (order == "ascend") {
+  if (order == "descend" || headerOrder == "ascend") {
     headerElement["order"] = "descend";
     table.sortList(cmpdescend);
-  } else if (order == "descend") {
+  } else if (order == "ascend" || headerOrder == "descend") {
     headerElement["order"] = "ascend";
     table.sortList(cmpascend);
   } else {

@@ -10,6 +10,9 @@ from scrape.basic_scraper import BasicScraper, ScraperResult;
 from selenium.webdriver.remote.webdriver import WebDriver
 from helpers.scraper_result import KeyResult, UrlResult;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.NOVEL;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, Session]):
         # self.useHtml(url);
@@ -44,7 +47,7 @@ class SiteScraper(ConfigureSiteScraper):
             chapter = HTMLParser(htmlStr).body;
             lines = ScraperResult.get_lines(chapter);
             self._result = ScraperResult(
-                story_type = StoryType.NOVEL,
+                story_type = get_story_type(sections),
                 urls = UrlResult(
                     prev = None if chapterInfo.get('preChapterId') == '-1' else self.getUrl(sections, chapterInfo['preChapterId'], chapterInfo['preChapterName'], token),
                     current = url,

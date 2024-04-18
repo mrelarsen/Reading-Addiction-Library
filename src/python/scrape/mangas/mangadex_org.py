@@ -6,6 +6,9 @@ from selectolax.parser import HTMLParser;
 from scrape.configure_site_scraper import ConfigureSiteScraper;
 from helpers.scraper_result import KeyResult, UrlResult;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.MANGA;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
@@ -70,7 +73,7 @@ class SiteScraper(ConfigureSiteScraper):
 
         prefix = "https://mangadex.org/chapter/";
         self._result = ScraperResult(
-            story_type = StoryType.MANGA,
+            story_type = get_story_type(sections),
             urls = UrlResult(
                 prev = prefix + prev_chapter['id'] if prev_chapter else None,
                 current = url,

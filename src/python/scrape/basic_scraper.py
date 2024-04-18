@@ -5,10 +5,9 @@ import requests;
 from io import BytesIO
 from PIL import Image;
 from math import ceil;
-from selectolax.parser import HTMLParser, Node
+from selectolax.parser import Node
 from helpers.story_type import StoryType
 from helpers.scraper_result import ScraperResult, KeyResult, UrlResult
-from helpers.joke import Joke;
 from selenium.webdriver.remote.webdriver import WebDriver
 
 class BasicConfiguration():

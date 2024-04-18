@@ -2,6 +2,7 @@ from typing import Optional
 from helpers.joke import Joke
 from helpers.story_type import StoryType
 from selectolax.parser import HTMLParser, Node
+from helpers.meme import Meme
 
 class KeyResult():
     def __init__(self, story: str|None, domain: str|None, chapter: str|None) -> None:
@@ -63,11 +64,13 @@ class ScraperResult():
             'driver_required':self.driver_required,
             'driver_requires_reset':self.driver_requires_reset}
     
-    def updateLoading(self):
-        loading = ScraperResult._get_waiting(self.urls.current, self.urls.current);
-        self.chapter = loading.chapter,
-        self.lines = loading.lines,
-        self.counter += 1;
+    def updateLoading(self, type: StoryType):
+        if self.is_loading():
+            loading = ScraperResult._get_waiting(self.urls.current, self.urls.current, type);
+            self.chapter = loading.chapter,
+            self.lines = loading.lines,
+            self.images = loading.images,
+            self.counter += 1;
 
     @staticmethod
     def _get_default_tts(texts: list, title: str, url:str, next_url: Optional[str] = None, loading = False, driver_required = False, driver_requires_reset = False):
@@ -78,6 +81,30 @@ class ScraperResult():
             urls = UrlResult(prev=None, current = url, next=next_url),
             chapter = chapter,
             lines = ScraperResult.get_lines(chapter),
+            titles = KeyResult(
+                chapter=title,
+                domain = None,
+                story = None,
+            ),
+            keys = KeyResult(
+                story=None,
+                chapter=None,
+                domain = None,
+            ),
+            loading = loading,
+            driver_required = driver_required,
+            driver_requires_reset = driver_requires_reset,
+        )
+    
+    @staticmethod
+    def _get_default_image(images: list, title: str, url:str, next_url: Optional[str] = None, loading = False, driver_required = False, driver_requires_reset = False):
+        chapter = HTMLParser(f"<div></div>").body.child;
+        return ScraperResult(
+            story_type=StoryType.MANGA,
+            urls = UrlResult(prev=None, current = url, next=next_url),
+            chapter = chapter,
+            lines = ScraperResult.get_lines(chapter),
+            images = images,
             titles = KeyResult(
                 chapter=title,
                 domain = None,
@@ -124,33 +151,74 @@ class ScraperResult():
             url = url,
             next_url=url if driver_requires_reset else None,
             driver_requires_reset=driver_requires_reset);
+
+    @staticmethod
+    def get_entertaiment_by_story_type(type: StoryType = StoryType.NOVEL):
+        if (type == StoryType.MANGA):
+            meme = Meme();
+            return meme.texts, meme.title, meme.images;
+        if (type == StoryType.NOVEL):
+            joke = Joke();
+            return ([joke.type] + joke.texts), None, None;
+        return ['Error finding entertainment'], 'Entertainment error', None;
     
     @staticmethod
-    def _get_waiting(url: str, next_url: str):
-        joke = Joke();
+    def _get_waiting_empty(url: str, next_url: str):
         return ScraperResult._get_default_tts(
-            texts = ['Loading', joke.type] + joke.texts,
+            texts = ['Loading'],
             title = 'Loading site',
             url = url,
             next_url = next_url,
             loading = True);
     
     @staticmethod
-    def _get_driver_required(url: str):
-        joke = Joke();
+    def _get_waiting(url: str, next_url: str, type: StoryType):
+        texts, title, images = ScraperResult.get_entertaiment_by_story_type(type);
+        if images:
+            return ScraperResult._get_default_image(
+                images = images,
+                title = title or 'Loading site',
+                url = url,
+                next_url = next_url,
+                loading = True);
         return ScraperResult._get_default_tts(
-            texts = ['Loading', joke.type] + joke.texts,
-            title = 'Starting driver for website',
+            texts = ['Loading'] + texts,
+            title = title or 'Loading site',
+            url = url,
+            next_url = next_url,
+            loading = True);
+    
+    @staticmethod
+    def _get_driver_required(url: str, type: StoryType):
+        texts, title, images = ScraperResult.get_entertaiment_by_story_type(type);
+        if images:
+            return ScraperResult._get_default_image(
+                images = images,
+                title = title or 'Loading site',
+                url = url,
+                next_url = url,
+                driver_required = True);
+        return ScraperResult._get_default_tts(
+            texts = ['Loading'] + texts,
+            title = title or 'Starting driver for website',
             url = url,
             next_url = url,
             driver_required = True);
     
     @staticmethod
-    def _get_driver_requires_reset(url: str):
-        joke = Joke();
+    def _get_driver_requires_reset(url: str, type: StoryType):
+        texts, title, images = ScraperResult.get_entertaiment_by_story_type(type);
+        if images:
+            return ScraperResult._get_default_image(
+                images = images,
+                title = title or 'Resetting driver for website',
+                url = url,
+                next_url = url,
+                driver_required = True,
+                driver_requires_reset = True);
         return ScraperResult._get_default_tts(
-            texts = ['Resetting', joke.type] + joke.texts,
-            title = 'Starting driver for website',
+            texts = ['Resetting'] + texts,
+            title = title or 'Starting driver for website',
             url = url,
             next_url = url,
             driver_required = True,

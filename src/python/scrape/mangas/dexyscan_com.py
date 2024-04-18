@@ -6,6 +6,9 @@ from helpers.driver import Driver
 from scrape.configure_site_scraper import ConfigureSiteScraper;
 from helpers.scraper_result import KeyResult, UrlResult;
 
+def get_story_type(sections) -> StoryType:
+    return StoryType.MANGA;
+
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
@@ -38,7 +41,7 @@ class SiteScraper(ConfigureSiteScraper):
         next_chapter = next((x for x in chapters if x['serialNumber'] == chapter_number + 1), None);
 
         self._result = ScraperResult(
-            story_type = StoryType.MANGA,
+            story_type = get_story_type(sections),
             urls = UrlResult(
                 prev = "/".join(sections[:-1] + [prev_chapter['_id']]) if prev_chapter else None,
                 current = url,

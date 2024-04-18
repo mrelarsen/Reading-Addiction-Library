@@ -208,9 +208,8 @@ function setStories(stories) {
   editStoryBtn.state.disabled = true;
   mergeStoryBtn.state.disabled = true;
   if (typeof storyPicker.sortColumnAndUpdateList === "function") {
-    const headerElement = storyPicker.$('th[name="created"]');
-    storyPicker.sortColumnAndUpdateList(headerElement); // asc
-    storyPicker.sortColumnAndUpdateList(headerElement); // desc
+    const headerElement = storyPicker.$('th[name="latest"]');
+    storyPicker.sortColumnAndUpdateList(headerElement, "descend");
   }
 }
 
@@ -248,9 +247,8 @@ function setChapters(chapters) {
   chapterPicker = parent.$("#chapter_picker");
   editChapterBtn = chapterPicker.$(".chapter_picker_edit_btn");
   if (typeof chapterPicker.sortColumnAndUpdateList === "function") {
-    const headerElement = chapterPicker.$('th[name="created"]');
-    chapterPicker.sortColumnAndUpdateList(headerElement); // asc
-    chapterPicker.sortColumnAndUpdateList(headerElement); // desc
+    const headerElement = chapterPicker.$('th[name="latest"]');
+    chapterPicker.sortColumnAndUpdateList(headerElement, "descend");
     editChapterBtn.state.disabled = true;
   }
 }
