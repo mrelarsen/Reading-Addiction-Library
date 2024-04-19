@@ -18,10 +18,8 @@ class ScrapeHandler():
         task = WorkerTask(url, urllist);
 
         if task.url not in self.results:
-            print(task.module_story_type)
             self.results[task.url] = ScraperResult._get_waiting(task.url, task.url, task.module_story_type);
         else:
-            print(task.module_story_type)
             self.results[task.url].updateLoading(task.module_story_type);
 
         if self.queue.maxsize * 0.5 > self.queue.qsize():
