@@ -35,6 +35,12 @@ document.ready = () => {
     updateDisabled(htmlarea);
   });
 
+  document.on("click", "#btn_reader_paste_continuous", () => {
+    const htmlarea = document.$("#inp_reader_url_list > htmlarea");
+    htmlarea.value = "!" + callReader("paste_html");
+    updateDisabled(htmlarea);
+  });
+
   document.on("click", "#btn_reader_clear", () => {
     const htmlarea = document.$("#inp_reader_url_list > htmlarea");
     htmlarea.value = "";
@@ -45,6 +51,14 @@ document.ready = () => {
     const htmlarea = document.$("#inp_reader_url_list > htmlarea");
     htmlarea.value = htmlarea.textContent
       ? `${htmlarea.value} ${callReader("paste_html")}`
+      : callReader("paste_html");
+    updateDisabled(htmlarea);
+  });
+
+  document.on("click", "#btn_reader_add_continuous", () => {
+    const htmlarea = document.$("#inp_reader_url_list > htmlarea");
+    htmlarea.value = htmlarea.textContent
+      ? `${htmlarea.value} !${callReader("paste_html")}`
       : callReader("paste_html");
     updateDisabled(htmlarea);
   });

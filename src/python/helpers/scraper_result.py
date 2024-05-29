@@ -63,13 +63,21 @@ class ScraperResult():
             'loading':self.loading,
             'driver_required':self.driver_required,
             'driver_requires_reset':self.driver_requires_reset}
+
+    def get_ensuing_url(self, dir: int):
+        if dir < 0:
+            return self.urls.prev;
+        if dir == 0:
+            return self.urls.current;
+        if dir > 0:
+            return self.urls.next;
     
     def updateLoading(self, type: StoryType):
         if self.is_loading():
             loading = ScraperResult._get_waiting(self.urls.current, self.urls.current, type);
-            self.chapter = loading.chapter,
-            self.lines = loading.lines,
-            self.images = loading.images,
+            self.chapter = loading.chapter;
+            self.lines = loading.lines;
+            self.images = loading.images;
             self.counter += 1;
 
     @staticmethod

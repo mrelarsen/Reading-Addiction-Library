@@ -1,4 +1,5 @@
 import requests
+import json;
 from helpers.scraper_result import ScraperResult
 from helpers.story_type import StoryType
 from helpers.driver import Driver
@@ -60,13 +61,18 @@ class SiteScraper(ConfigureSiteScraper):
         if not group_uuid:
             story_url = f"https://api.mangadex.org/manga/{manga_uuid}/aggregate?translatedLanguage[]={attributes['translatedLanguage'] or 'en'}";
         story_content = self._try_get_json(story_url, self._session);
-        volumes = self.walk(story_content, 'volumes');
         chapters = [];
-        for volume in volumes.values():
-            for chap in volume['chapters'].values():
-                chapters.append(chap);
-        chapters.sort(key=lambda x: self.zpad(x['chapter'], 5), reverse=False)
-        chapter_index = next(index for index, chap in enumerate(chapters) if chap['id'] == chapter_uuid);
+        chapter_index = 0;
+        result = self.walk(story_content, 'result');
+        if result and result == 'error':
+            print("An error occured fetching next and previous chapter", json.dumps(story_content), story_url);
+        else:
+            volumes = self.walk(story_content, 'volumes');
+            for volume in volumes.values():
+                for chap in volume['chapters'].values():
+                    chapters.append(chap);
+            chapters.sort(key=lambda x: self.zpad(x['chapter'], 5), reverse=False)
+            chapter_index = next(index for index, chap in enumerate(chapters) if chap['id'] == chapter_uuid);
 
         next_chapter = chapters[chapter_index + 1] if len(chapters) > chapter_index + 1 else None;
         prev_chapter = chapters[chapter_index - 1] if chapter_index > 0 else None;

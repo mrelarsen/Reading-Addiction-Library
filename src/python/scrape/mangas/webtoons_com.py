@@ -19,31 +19,31 @@ class SiteScraper(ConfigureSiteScraper):
     def getConfiguration(self, url: str):
         return BasicConfiguration(
             get_story_type = lambda node, sections: get_story_type(sections),
-            src = 'data-src',
-            get_chapter = lambda node, sections: node.css_first('.reading-content'),
+            src = 'data-url',
+            get_chapter = lambda node, sections: node.css_first('.viewer .viewer_img'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
             get_keys = lambda node, sections: KeyResult(
-                story = sections[4],
-                chapter = sections[5],
+                story = sections[5],
+                chapter = sections[6],
                 domain = None,
             ),
         );
 
     def get_titles(self, node: Node, sections: list[str]):
-        chapter = node.css_first('ol.breadcrumb li.active');
-        story = node.css('ol.breadcrumb li')[1];
+        chapter = node.css_first('.subj_info h1.subj_episode');
+        story = node.css_first('.subj_info a.subj');
         return KeyResult(
-            chapter = chapter.text().strip(),
+            chapter = chapter.text(),
             domain = None,
-            story = story.text().strip(),
+            story = story.text(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):
-        prev = node.css_first('.nav-previous a.prev_page');
-        next = node.css_first('.nav-next a.next_page');
+        prev = node.css_first('.paginate a.pg_prev');
+        next = node.css_first('.paginate a.pg_next');
         return UrlResult(
-            prev = self.tryGetHref(prev),
-            current = url,
-            next = self.tryGetHref(next),
+                prev = self.tryGetHref(prev),
+                current = url,
+                next = self.tryGetHref(next),
         );

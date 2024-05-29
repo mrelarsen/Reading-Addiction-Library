@@ -1,3 +1,4 @@
+import base64
 import os
 import threading
 from typing import Callable, Optional, Union;
@@ -62,38 +63,45 @@ class BasicScraper():
                 img_urls.append(src(img_tag));
             elif src in img_tag.attributes and img_tag.attributes[src]:
                 img_urls.append(img_tag.attributes[src]);
-        return self._get_images(img_urls);
+        return self._get_images(img_urls, src);
 
-    def _get_images(self, img_urls: list[str] = [], retry = 0):
-        threads, images = self._get_image_threads(img_urls)
+    def _get_images(self, img_urls: list[str] = [], src = 'src', retry = 0):
+        threads, images, errors = self._get_image_threads(img_urls, src)
         for thread in threads:
             thread.start();
         for thread in threads:
             thread.join();
-        self._handle_failure_and_logging(img_urls, images, retry);
+        self._handle_failure_and_logging(img_urls, src, images, errors, retry);
         return [image for image_sublist in images for image in image_sublist];
 
-    def _handle_failure_and_logging(self, img_urls: list[str], images: list, retry: int):
+    def _handle_failure_and_logging(self, img_urls: list[str], src, images: list, errors: list, retry: int):
         if all([True if len(x) == 0 else False for x in images]) and retry < 2:
+            [print(f'Image error: {error}') for error_list in errors for error in error_list];
             print(f'Retry fetcing images, {retry + 1} attempt');
-            return self._get_images(img_urls, retry + 1);
+            return self._get_images(img_urls, src, retry + 1);
         for i,x in enumerate(images):
             if len(x) == 0:
                 print(f'Failed to parse image {i+1} of {len(images)} images from the url: {img_urls[i]}');
+                for error in errors[i]: print(f'Image error: {error}');
 
-    def _get_image_threads(self, img_urls: list[str]):
+    def _get_image_threads(self, img_urls: list[str], src):
         threads: list[threading.Thread] = [];
         images = [];
+        errors = [];
         for img_url in img_urls:
             img_url = img_url.strip();
+            # print(f'Img url: {img_url}')
             if not img_url.startswith('http'): continue;
-            image_list: list[bytes] = []
+            
+            image_list: list[bytes] = [];
+            error_list: list[str] = [];
             images.append(image_list);
-            t = threading.Thread(target=self._get_image_async, args=(image_list, img_url), daemon=False);
+            errors.append(error_list);
+            t = threading.Thread(target=self._get_image_async, args=(image_list, img_url, src, error_list), daemon=False);
             threads.append(t);
-        return threads, images;
+        return threads, images, errors;
 
-    def _get_image_async(self, images: list, img_url: str):
+    def _get_image_async(self, images: list, img_url: str, src, errors: list):
         url_no_params = img_url.split('?')[0];
         file_name, ext = os.path.splitext(url_no_params);
         merged_headers = dict();
@@ -107,16 +115,41 @@ class BasicScraper():
         });
         merged_headers.update(self._headers);
         for i in range(3):
-            response = self._try_get_response(img_url, self._session, merged_headers, False)
+            # errors.append(f"Try {i} of 3");
+            if i == 0 or not self._driver or callable(src):
+                response = self._try_get_response(img_url, self._session, merged_headers, False);
+            else:
+                img_type, img_file = BasicScraper.get_image(self._driver, img_url, src);
+                # errors.append(img_type);
+                if not img_file or not img_type: continue;
+                success = self._extract_image(images, img_file, img_type);
+                if success: break;
+                continue;
             if not response or not response.ok: 
+                errors.append("Response status code: " + str(response.status_code))
                 continue;
             img_file = response.content
-            img_type = response.headers["Content-Type"].split("/")[-1];
-            if img_type == 'error':
+            img_type = response.headers.get("Content-Type");
+            if not img_type or img_type.split("/")[-1] == 'error':
+                errors.append("Content-type: " + str(response.headers.get("Content-Type")))
                 continue;
-            success = self._extract_image(images, img_file, img_type);
+            success = self._extract_image(images, img_file, img_type.split("/")[-1]);
             if success:
                 break;
+    
+    def get_image(driver: WebDriver, img_url: str, src:str):
+        base64string = driver.execute_script("var c = document.createElement('canvas');"
+                       + "var ctx = c.getContext('2d');"
+                       + f'var img = document.querySelector("img[{src}="{img_url}"]");'
+                       + "if (img == null) return null;"
+                       + "c.height=img.naturalHeight;"
+                       + "c.width=img.naturalWidth;"
+                       + "ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);"
+                       + "var base64String = c.toDataURL();"
+                       + "return base64String;");
+        if not base64string: return None, None;
+        base64Array = base64string.split(',');
+        return base64Array[0].split(':')[-1], base64.b64decode(base64Array[-1]);
 
     def _extract_image(self, images: list, img_file: bytes, ext: str) -> bool:
         try:
@@ -136,12 +169,12 @@ class BasicScraper():
             print('error', e);
             return False;
 
-    def _try_get_json(self, url: str, session: requests.Session, headers = {}):
+    def _try_get_json(self, url: str, session: requests.Session|None, headers = {}):
         result = self._try_get_response(url, session, headers);
         if result is not None:
             return result.json();
 
-    def _try_get_response(self, url: str, session: Optional[requests.Session], headers = {}, setResult = True):
+    def _try_get_response(self, url: str, session: requests.Session|None, headers = {}, setResult = True):
         error = "";
         try:
             if session:

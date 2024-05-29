@@ -10,15 +10,15 @@ class WorkerTask():
         self.urllist = urllist;
         self.adjecent = adjecent;
         self.tries = 0;
-        self.module_name, self.alt_url = self.__get_module_name(url);
+        self.module_name, self.alt_url = self.__get_module_name(self.url);
         self.module_class = self.__get_module_class(self.module_name);
-        self.module_story_type = self.__get_module_story_type(self.module_name)(url);
+        self.module_story_type = self.__get_module_story_type(self.module_name)(self.url.split('/'));
         pass
 
     def increment(self):
         self.tries += 1;
     
-    def get_ensuing_task_from_list(self, dir: int, result: ScraperResult = None):
+    def get_ensuing_task_from_list(self, dir: int, result: ScraperResult):
         if self.urllist and not result.is_loading():
             index, url = self.get_match(self.url);
             if url and (url[0] != '!' or dir < 0):
@@ -26,7 +26,7 @@ class WorkerTask():
                 if index != -1 and next_index >= 0 and next_index < len(self.urllist):
                     return WorkerTask(self.urllist[next_index], self.urllist, True);
             elif dir > 0 and url:
-                next = self.get_ensuing_url_from_result(dir, result);
+                next = None if result is None else result.get_ensuing_url(dir);
                 if next:
                     next_index, next_url = self.get_match(next);
                     if next_url:
@@ -38,34 +38,22 @@ class WorkerTask():
                         return WorkerTask(self.urllist[index + 1], self.urllist, True);
         return None;
 
-    def get_ensuing_url_from_result(self, dir: int, result: ScraperResult = None):
-        if result:
-            if dir < 0:
-                return result.urls.prev;
-            if dir == 0:
-                return result.urls.current;
-            if dir > 0:
-                return result.urls.next;
-        return None;
-
-    def get_ensuing_task_from_result(self, dir: int, result: ScraperResult = None):
-        url = self.get_ensuing_url_from_result(dir, result);
+    def get_ensuing_task_from_result(self, dir: int, result: ScraperResult):
+        url = None if result is None else result.get_ensuing_url(dir);
         if url:
             return WorkerTask(url, None, True);
         return None;
 
-    def get_ensuing_task(self, dir: int, result: ScraperResult = None):
+    def get_ensuing_task(self, dir: int, result: ScraperResult):
         task = self.get_ensuing_task_from_list(dir, result);
         return task or self.get_ensuing_task_from_result(dir, result);
 
     def get_match(self, url: str):
         if self.urllist:
-            if url in self.urllist:
-                index = self.urllist.index(url);
-                return index, self.urllist[index];
-            if f'!{url}' in self.urllist:
-                index = self.urllist.index(f'!{url}');
-                return index, self.urllist[index];
+            for x in [url, f'!{url}']:
+                if x in self.urllist:
+                    index = self.urllist.index(x);
+                    return index, self.urllist[index];
         return None, None;
 
     def __get_module_name(self, scrape_url: str):
@@ -92,6 +80,9 @@ class WorkerTask():
                 split_domain.remove('www');
             modulename = "_".join(split_domain);
             return (modulename, None);
+        elif scrape_url.startswith("meme"):
+            return ("meme", None);
+
         return (None, None);
 
     def __get_module_class(self, modulename: str):

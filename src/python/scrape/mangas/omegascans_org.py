@@ -21,7 +21,7 @@ class SiteScraper(ConfigureSiteScraper):
         return BasicConfiguration(
             get_story_type = lambda node, sections: get_story_type(sections),
             src = lambda node: node.attributes.get('data-src') or node.attributes.get('src'),
-            get_chapter = lambda node, sections: node.css_first('.container > p.flex'),
+            get_chapter = lambda node, sections: node.css_first('.container'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
             get_keys = lambda node, sections: KeyResult(
@@ -33,10 +33,11 @@ class SiteScraper(ConfigureSiteScraper):
 
     def get_titles(self, node: Node, sections: list[str]):
         chapter = node.css_first('.container > div.flex h1')
+        story = node.css_first('.container > div.flex h2')
         return KeyResult(
-            chapter = chapter.text(),
+            chapter = chapter.text().strip(),
             domain = None,
-            story = None,
+            story = story.text().strip(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):

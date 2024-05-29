@@ -31,11 +31,12 @@ class SiteScraper(ConfigureSiteScraper):
         );
 
     def get_titles(self, node: Node, sections: list[str]):
-        chapter = node.css_first('ol.breadcrumb li.active')
+        chapter = node.css_first('ol.breadcrumb li.active');
+        story = node.css('ol.breadcrumb li')[1];
         return KeyResult(
-            chapter = chapter.text(),
+            chapter = chapter.text().strip(),
             domain = None,
-            story = None,
+            story = story.text().strip(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):

@@ -127,7 +127,7 @@ export function scrollLineToCenter(lineNumber) {
       0,
       elementBox.origin.y - yError * (elementBox.origin.x / firstElementBox.x)
     );
-    console.log("Use yError estimat modified position to scroll");
+    console.log("Use yError estimat modified position to scroll", yError);
   }
   const mainSize = main.box("client").size;
   const mainPosition = main.scrollPosition; // the above, adjusted to main content

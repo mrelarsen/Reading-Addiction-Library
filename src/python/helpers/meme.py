@@ -18,6 +18,6 @@ class Meme():
                 self.texts = ['Error fetching mime image'];
                 self.images = None;
         else:
-            self.title = ['Error fetching mime'];
+            self.title = 'Error fetching mime';
             self.texts = ['Error fetching mime'];
             self.images = None;

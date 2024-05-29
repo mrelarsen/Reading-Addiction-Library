@@ -116,7 +116,7 @@ class ReaderEventHandler():
 
     @sciter.script('read_list')
     def read_list(self, text: str, next = False):
-        urllist = [x for x in re.split(r'[\s,]', text) if x and re.match(r'^!?(http|file)', x)];
+        urllist = [x for x in re.split(r'[\s,]', text) if x and re.match(r'^!?(http|file|meme)', x)];
         self.html_list = [];
         print(urllist)
         if not next:
@@ -131,10 +131,8 @@ class ReaderEventHandler():
     def read(self, dir = 0, force = False, urllist: Optional[list[str]] = None):
         story_type, result = self.scrape_service.read_info(dir=dir, urllist=urllist);
         if story_type == StoryType.NOVEL:
-            print('novel')
             self.read_tts(result=result, force=force);
         elif story_type == StoryType.MANGA:
-            print('manga')
             self.read_manga(result=result);
         else:
             print('Url not found or wrong format!');

@@ -73,10 +73,8 @@ class BasicSiteScraper(BasicScraper):
             return ScraperResult._get_cannot_parse(self._url, not not self._driver);
         # print(body.html)
         story_type = self._configuration.get_story_type(body, sections);
-        print(story_type);
         lines = ScraperResult.get_lines(chapter) if story_type == StoryType.NOVEL else None;
-
-        byte_images = self._get_images_from_tags(img_tags=chapter.css('img'), src=self._configuration.src) if story_type == StoryType.MANGA else None;
+        byte_images = self._get_images_from_tags(img_tags=chapter.css(f'img[{self._configuration.src}]' if not callable(self._configuration.src) else 'img'), src=self._configuration.src) if story_type == StoryType.MANGA else None;
         return ScraperResult(
             story_type = story_type,
             urls = self._configuration.get_urls(body, sections),

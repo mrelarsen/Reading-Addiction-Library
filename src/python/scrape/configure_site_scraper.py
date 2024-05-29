@@ -21,14 +21,14 @@ class ConfigureSiteScraper(BasicSiteScraper):
     def useReDriver(self, url: str, driver: Driver, awaitTerm: str|None = None):
         if driver.get_usage() > 0:
             conf = self.getConfiguration(url);
-            self._result = ScraperResult._get_driver_requires_reset(url, conf.get_story_type());
+            self._result = ScraperResult._get_driver_requires_reset(url, conf.get_story_type(None, url.split('/')));
         else:
             self.useDriver(url, driver, awaitTerm);
 
     def useDriver(self, url: str, driver: Driver, awaitTerm: str|None = None):
         conf = self.getConfiguration(url);
         if not driver.is_running():
-            self._result = ScraperResult._get_driver_required(url, conf.get_story_type());
+            self._result = ScraperResult._get_driver_required(url, conf.get_story_type(None, url.split('/')));
         else:
             super().__init__(url=url, driver=driver.get(), awaitTerm=awaitTerm, configuration=conf, headers=self.headers);
 

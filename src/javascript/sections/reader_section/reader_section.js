@@ -25,10 +25,15 @@ document.ready = () => {
 function setUrls(urls) {
   urlDict = urls;
   reader.$("#rdr_btn_prev").state.disabled = !urls["prev"];
+  reader.$("#rdr_btn_prev").setAttribute("title", urls["prev"]);
   reader.$("#rdr_btn_copy_prev").state.disabled = !urls["prev"];
+  reader.$("#rdr_btn_copy_prev").setAttribute("title", urls["prev"]);
   reader.$("#rdr_btn_next").state.disabled = !urls["next"];
+  reader.$("#rdr_btn_next").setAttribute("title", urls["next"]);
   reader.$("#rdr_btn_copy_next").state.disabled = !urls["next"];
+  reader.$("#rdr_btn_copy_next").setAttribute("title", urls["next"]);
   reader.$("#rdr_btn_copy").state.disabled = !urls["current"];
+  reader.$("#rdr_btn_copy").setAttribute("title", urls["current"]);
 }
 
 function changeClass(selector, a, b) {
@@ -39,14 +44,16 @@ function changeClass(selector, a, b) {
 function replaceManga(images) {
   loadToggle(true);
   const html = images
-    .map(
-      (_, index) =>
-        `<div class="manga-image" style="width:*;"><img #manga-page-${index} style="max-width: 50%; display: block;  margin-left: auto;  margin-right: auto;"></div>`
+    .map((image, index) =>
+      !image
+        ? "<div>&nbsp;</div>"
+        : `<div class="manga-image" style="width:*;"><img #manga-page-${index} style="max-width: 50%; display: block;  margin-left: auto;  margin-right: auto;"></div>`
     )
     .join("");
   globalThis.replaceId("rdr_content", html);
   for (var i = 0; i < images.length; i++) {
     const image = images[i];
+    if (!image) continue;
     const mangaImg = reader.$(`#manga-page-${i}`);
     mangaImg.value = Graphics.Image.fromBytes(image);
     // mangaImg.onClick((evt, element) => console.log("click image 1"));

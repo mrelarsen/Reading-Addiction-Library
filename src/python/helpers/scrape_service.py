@@ -1,8 +1,9 @@
 from typing import Optional, Tuple
-from helpers.async_scraper import WorkerTask, ScrapeHandler
+from helpers.async_scraper import ScrapeHandler
 from helpers.reading_status import ReadingStatus
 from helpers.story_type import StoryType
 from helpers.driver import Driver
+from helpers.worker_task import WorkerTask
 from scrape.basic_scraper import ScraperResult
 from database.history import History   
     

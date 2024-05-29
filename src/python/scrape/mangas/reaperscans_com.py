@@ -12,9 +12,9 @@ def get_story_type(sections) -> StoryType:
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
-        # super().useDriver(url, driver);
+        super().useDriver(url, driver, "main");
         # super().useReDriver(url, driver);
-        super().useSession(url, session_dict);
+        # super().useSession(url, session_dict);
         
     def getConfiguration(self, url: str):
         prefix = 'https://reaperscans.com';

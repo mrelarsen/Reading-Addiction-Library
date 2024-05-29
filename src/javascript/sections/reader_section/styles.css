@@ -6,6 +6,10 @@
   object-fit: contain;
 }
 
+#rdr_content .manga-image img {
+  opacity: 0.87;
+}
+
 #rdr_content {
   /* word-wrap: break-word; */
   /* overflow-wrap: break-word; */
