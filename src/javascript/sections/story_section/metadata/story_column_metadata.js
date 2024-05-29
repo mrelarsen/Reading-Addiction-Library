@@ -25,6 +25,12 @@ export const storyColumnMetadata = {
     visible: true,
     sortable: true,
   },
+  domains: {
+    title: "Domains",
+    width: "50px",
+    visible: false,
+    sortable: false,
+  },
   created: {
     title: "Created",
     width: "100px",

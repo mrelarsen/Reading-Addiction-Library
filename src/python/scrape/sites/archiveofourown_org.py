@@ -56,6 +56,7 @@ class SiteScraper(ConfigureSiteScraper):
                 'Fan-fiction has been downloaded!',
                 url = self._url,
                 next_url = f'file:///{abs_path}#chap_1',
+                loading = True,
             );
         else:
             return ScraperResult._get_default_tts(

@@ -44,7 +44,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css_first('a.navi-change-chapter-btn-prev');
         next = node.css_first('a.navi-change-chapter-btn-next');
         return UrlResult(
-                prev = self.tryGetHref(prev, prefix),
-                current = url,
-                next = self.tryGetHref(next, prefix),
+            prev = self.tryGetHref(prev, prefix),
+            current = url,
+            next = self.tryGetHref(next, prefix),
         );

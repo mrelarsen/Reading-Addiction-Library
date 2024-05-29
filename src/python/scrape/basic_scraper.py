@@ -48,6 +48,7 @@ class BasicScraper():
     def get_result(self, domain: str|None = None) -> ScraperResult:
         return self._result is not None and self._result.get_with_domain(domain) or ScraperResult._get_error('Missing ScraperResult', self._url);
 
+    @staticmethod
     def get_children(node: Node):
         children = [];
         child = node.child;
@@ -58,11 +59,17 @@ class BasicScraper():
 
     def _get_images_from_tags(self, img_tags: list[Node]=[], src = 'src'):
         img_urls = [];
+        if len(img_tags) == 0:
+            print("No image tags were found");
+            return [];
         for img_tag in img_tags:
             if callable(src):
                 img_urls.append(src(img_tag));
             elif src in img_tag.attributes and img_tag.attributes[src]:
-                img_urls.append(img_tag.attributes[src]);
+                img_urls.append(img_tag.attributes[src].strip());
+        if len(img_urls) == 0:
+            print("No images were found");
+            return [];
         return self._get_images(img_urls, src);
 
     def _get_images(self, img_urls: list[str] = [], src = 'src', retry = 0):
@@ -136,11 +143,13 @@ class BasicScraper():
             success = self._extract_image(images, img_file, img_type.split("/")[-1]);
             if success:
                 break;
+            errors.append(f"Error fetching image: {img_url}")
     
+    @staticmethod
     def get_image(driver: WebDriver, img_url: str, src:str):
         base64string = driver.execute_script("var c = document.createElement('canvas');"
                        + "var ctx = c.getContext('2d');"
-                       + f'var img = document.querySelector("img[{src}="{img_url}"]");'
+                       + f'var img = document.querySelector(`img[{src}="{img_url}"]`);'
                        + "if (img == null) return null;"
                        + "c.height=img.naturalHeight;"
                        + "c.width=img.naturalWidth;"

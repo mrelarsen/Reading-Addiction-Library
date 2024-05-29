@@ -12,9 +12,9 @@ def get_story_type(sections) -> StoryType:
 class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
         # super().useHtml(url);
-        super().useDriver(url, driver);
+        # super().useDriver(url, driver);
         # super().useReDriver(url, driver);
-        # super().useSession(url, session_dict);
+        super().useSession(url, session_dict);
         
     def getConfiguration(self, url: str):
         return BasicConfiguration(
@@ -42,7 +42,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css_first('.nextprev a.ch-prev-btn');
         next = node.css_first('.nextprev a.ch-next-btn');
         return UrlResult(
-                prev = self.tryGetHref(prev),
-                current = url,
-                next = self.tryGetHref(next),
+            prev = self.tryGetHref(prev),
+            current = url,
+            next = self.tryGetHref(next),
         );

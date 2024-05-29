@@ -43,7 +43,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css_first('.paginate a.pg_prev');
         next = node.css_first('.paginate a.pg_next');
         return UrlResult(
-                prev = self.tryGetHref(prev),
-                current = url,
-                next = self.tryGetHref(next),
+            prev = self.tryGetHref(prev),
+            current = url,
+            next = self.tryGetHref(next),
         );

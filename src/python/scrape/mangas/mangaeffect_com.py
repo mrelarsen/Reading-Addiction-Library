@@ -17,11 +17,10 @@ class SiteScraper(ConfigureSiteScraper):
         super().useSession(url, session_dict);
         
     def getConfiguration(self, url: str):
-        prefix = 'https://mangaread.org';
         return BasicConfiguration(
             get_story_type = lambda node, sections: get_story_type(sections),
-            src = 'src',
-            get_chapter = lambda node, sections: node.css_first('.reading-content'),
+            src = 'data-src',
+            get_chapter = lambda node, sections: node.css_first('.read-container .reading-content'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
             get_keys = lambda node, sections: KeyResult(
@@ -35,9 +34,9 @@ class SiteScraper(ConfigureSiteScraper):
         chapter = node.css_first('ol.breadcrumb li.active');
         story = node.css('ol.breadcrumb li a')[1];
         return KeyResult(
-            chapter = chapter.text().strip(),
+            chapter = chapter.text(),
             domain = None,
-            story = story.text().strip(),
+            story = story.text(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):

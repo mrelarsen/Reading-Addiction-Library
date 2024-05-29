@@ -43,7 +43,7 @@ class SiteScraper(Asuratoon):
     #     prev = node.css_first('.nextprev a.ch-prev-btn');
     #     next = node.css_first('.nextprev a.ch-next-btn');
     #     return UrlResult(
-    #             prev = self.tryGetHref(prev),
-    #             current = url,
-    #             next = self.tryGetHref(next),
+    #         prev = self.tryGetHref(prev),
+    #         current = url,
+    #         next = self.tryGetHref(next),
     #     );

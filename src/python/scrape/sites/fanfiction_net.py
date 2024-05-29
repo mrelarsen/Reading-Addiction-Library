@@ -71,7 +71,8 @@ class SiteScraper(BasicSiteScraper):
                 texts = ['Fan-fiction has been downloaded', 'Proceeding to file'],
                 title = 'Fan-fiction has been downloaded!',
                 url = self._url,
-                next_url = f'file:///{abs_path}#chap_1');
+                next_url = f'file:///{abs_path}#chap_1',
+                loading = True);
         else:
             return ScraperResult._get_default_tts(
                 texts = ['Fan-fiction has been downloaded', f'Error: File not found - {abs_path}'],

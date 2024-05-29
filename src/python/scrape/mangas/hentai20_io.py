@@ -62,7 +62,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css_first('.nextprev .ch-prev-btn');
         next = node.css_first('.nextprev .ch-next-btn');
         return UrlResult(
-                prev = self.tryGetHref(prev),
-                current = url,
-                next = self.tryGetHref(next),
+            prev = self.tryGetHref(prev),
+            current = url,
+            next = self.tryGetHref(next),
         );

@@ -173,13 +173,14 @@ class StoryDatabase():
         created_latest_chapter = "(SELECT chapter.created FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.created ASC LIMIT 1) AS created"
         updated_latest_chapter = "(SELECT chapter.updated FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.updated DESC LIMIT 1) AS updated"
         key_first_domain = "(SELECT key FROM domain WHERE story.id = domain.story_id LIMIT 1) AS key"
+        domains = "(SELECT group_concat(domain, ' ') as domains FROM domain WHERE story.id = domain.story_id) AS domains"
         if pure:
             cursor.execute(f"SELECT * FROM story; ");
         elif not term:
-            cursor.execute(f"SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {key_first_domain} FROM story; ");
+            cursor.execute(f"SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {key_first_domain}, {domains} FROM story; ");
         else:
             where_match_term = f"""WHERE name LIKE "%{term}%" OR key LIKE "%{term}%" """
-            cursor.execute(f"""SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {key_first_domain} FROM story {where_match_term}; """);
+            cursor.execute(f"""SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {key_first_domain}, {domains} FROM story {where_match_term}; """);
         data = cursor.fetchall();
         conn.close();
         return data;

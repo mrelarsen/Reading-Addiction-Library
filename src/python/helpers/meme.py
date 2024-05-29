@@ -10,7 +10,7 @@ class Meme():
             json = response.json();
             self.title = json['title'];
             response = requests.get(json['url']);
-            img_type = response.headers["Content-Type"].split("/")[-1];
+            img_type = response.headers.get('Content-Type', '').split("/")[-1];
             if img_type != 'error':
                 self.images = [response.content];
                 self.texts = [];

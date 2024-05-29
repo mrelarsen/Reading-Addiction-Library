@@ -43,7 +43,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css_first('.chapter-nav .btn-chapter-prev');
         next = node.css_first('.chapter-nav .btn-chapter-next');
         return UrlResult(
-                prev = self.tryGetHref(prev, prefix),
-                current = url,
-                next = self.tryGetHref(next, prefix),
+            prev = self.tryGetHref(prev, prefix),
+            current = url,
+            next = self.tryGetHref(next, prefix),
         );

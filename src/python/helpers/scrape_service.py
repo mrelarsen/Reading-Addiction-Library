@@ -51,12 +51,21 @@ class ScrapeService():
         return None;
         
     def get_urls(self):
-        task = self.result and WorkerTask(self.result.urls.current, self.urllist);
-        next_task = self.result and task.get_ensuing_task(1, self.result)
-        prev_task = self.result and task.get_ensuing_task(-1, self.result)
+        if self.result is None: return self.get_empty_urls();
+        task = WorkerTask(self.result.urls.current, self.urllist);
+        next_task = task.get_ensuing_task(1, self.result)
+        prev_task = task.get_ensuing_task(-1, self.result)
         return [
             prev_task and prev_task.url,
-            self.result and self.result.urls.current,
+            self.result.urls.current,
             next_task and next_task.url,
+            self.urllist,
+        ];
+
+    def get_empty_urls(self):
+        return [
+            None,
+            None,
+            None,
             self.urllist,
         ];
