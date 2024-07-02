@@ -47,7 +47,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css('.entry-content .wp-block-columns .wp-block-column')[1].css('h3.has-text-align-center.wp-block-heading a')[0];
         next = node.css('.entry-content .wp-block-columns .wp-block-column')[1].css('h3.has-text-align-center.wp-block-heading a')[-1];
         return UrlResult(
-            prev = self.tryGetHref(prev, '', lambda element: len(element.attributes.get('href').split('/')) == 6),
+            prev = self.tryGetHref(prev, '', lambda element, href: len(href.split('/')) == 6),
             current = url,
-            next = self.tryGetHref(next, '', lambda element: len(element.attributes.get('href').split('/')) == 6),
+            next = self.tryGetHref(next, '', lambda element, href: len(href.split('/')) == 6),
         );

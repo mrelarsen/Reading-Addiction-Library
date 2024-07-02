@@ -43,7 +43,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css('.portlet-body .row.nav-buttons .btn.btn-primary')[0];
         next = node.css('.portlet-body .row.nav-buttons .btn.btn-primary')[1];
         return UrlResult(
-            prev = self.tryGetHref(prev, prefix, lambda element: element.tag == 'a'),
+            prev = self.tryGetHref(prev, prefix, lambda element, href: element.tag == 'a'),
             current = url,
-            next = self.tryGetHref(next, prefix, lambda element: element.tag == 'a'),
+            next = self.tryGetHref(next, prefix, lambda element, href: element.tag == 'a'),
         );

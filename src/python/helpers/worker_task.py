@@ -11,8 +11,8 @@ class WorkerTask():
         self.adjecent = adjecent;
         self.tries = 0;
         self.module_name, self.alt_url = self.__get_module_name(self.url);
-        self.module_class = self.__get_module_class(self.module_name);
-        self.module_story_type = self.__get_module_story_type(self.module_name)(self.url.split('/'));
+        self.module_class, get_story_type = self.__get_module(self.module_name);
+        self.module_story_type = get_story_type(self.url.split('/'));
         pass
 
     def increment(self):
@@ -85,25 +85,16 @@ class WorkerTask():
 
         return (None, None);
 
-    def __get_module_class(self, modulename: str):
+    def __get_module(self, modulename: str):
         modulename_path = self.__find_module(modulename)
         if modulename_path:
             module = importlib.import_module(modulename_path)
             site = getattr(module, 'SiteScraper') if hasattr(module, 'SiteScraper') else None;
             file = getattr(module, 'FileScraper') if hasattr(module, 'FileScraper') else None;
-            module_class = site or file;
-            if module_class:
-                return module_class;
-        return None;
-
-    def __get_module_story_type(self, modulename: str):
-        modulename_path = self.__find_module(modulename)
-        if modulename_path:
-            module = importlib.import_module(modulename_path)
             storytype = getattr(module, 'get_story_type') if hasattr(module, 'get_story_type') else None;
-            if storytype:
-                return storytype;
-        return None;
+            return site or file, storytype;
+        print('Module not found: %s' % modulename)
+        return None, None;
 
     def __find_module(self, modulename: str):
         if not modulename: return None;

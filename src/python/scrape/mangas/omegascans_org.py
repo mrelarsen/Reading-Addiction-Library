@@ -45,9 +45,9 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css('.container > div.flex > a')[0];
         next = node.css('.container > div.flex > a')[-1];
         return UrlResult(
-            prev = self.tryGetHref(prev, prefix, lambda element: len(element.attributes.get('href').split('/')) == 4),
+            prev = self.tryGetHref(prev, prefix, lambda element, href: len(href.split('/')) == 4),
             current = url,
-            next = self.tryGetHref(next, prefix, lambda element: len(element.attributes.get('href').split('/')) == 4),
+            next = self.tryGetHref(next, prefix, lambda element, href: len(href.split('/')) == 4),
         );
 
     # def _scrape(self, body: Node):

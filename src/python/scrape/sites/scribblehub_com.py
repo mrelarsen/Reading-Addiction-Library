@@ -51,7 +51,7 @@ class SiteScraper(ConfigureSiteScraper):
         prev = node.css_first('#chp_contents .nav_chp_fi .btn-prev');
         next = node.css_first('#chp_contents .nav_chp_fi .btn-next');
         return UrlResult(
-            prev = self.tryGetHref(prev, check=lambda element: 'disabled' not in element.attributes.get('class')),
+            prev = self.tryGetHref(prev, check=lambda element, href: 'disabled' not in element.attributes.get('class')),
             current = url,
-            next = self.tryGetHref(next, check=lambda element: 'disabled' not in element.attributes.get('class')),
+            next = self.tryGetHref(next, check=lambda element, href: 'disabled' not in element.attributes.get('class')),
         );

@@ -11,9 +11,9 @@ class ConfigureSiteScraper(BasicSiteScraper):
     def getConfiguration(self, url: str) -> BasicConfiguration:
         raise NotImplementedError();
 
-    def tryGetHref(self, element: Node, prefix='', check:Callable[[Node], bool]=lambda element: True):
+    def tryGetHref(self, element: Node, prefix='', check:Callable[[Node, str], bool]=lambda element, href: True):
         href = element and element.attributes.get('href');
-        return prefix + href if href and (prefix != '' or href.startswith('http')) and check(element) else None;
+        return prefix + href if href and (prefix != '' or href.startswith('http')) and check(element, href) else None;
 
     def useHtml(self, url: str):
         super().__init__(url=url, configuration=self.getConfiguration(url), headers=self.headers);
