@@ -1,23 +1,20 @@
-import json
-import re
 import requests
 from helpers.story_type import StoryType
 from helpers.driver import Driver
 from scrape.basic_scraper import BasicConfiguration;
+from scrape.configure_site_scraper import ConfigureSiteScraper;
 from selectolax.parser import Node, HTMLParser
 from helpers.scraper_result import KeyResult, ScraperResult, UrlResult;
-from scrape.mangas.asuracomic_net import SiteScraper as Asuratoon;
 
 def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
-class SiteScraper(Asuratoon):
+class SiteScraper(ConfigureSiteScraper):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
-        super().__init__(url.replace('asuratoon.com', 'asuracomic.net', 1), driver, session_dict, headers);
         # super().useHtml(url, headers);
-        # super().useDriver(url, driver, '#readerarea');
-        # super().useReDriver(url, driver, headers);;
-        # super().useSession(url, session_dict, headers);
+        super().useDriver(url, driver, headers, '#readerarea');
+        # super().useReDriver(url, driver, headers);
+        # super().useSession(url, session_dict, self.headers);
 
     def _scrape(self, body: Node, head: Node, parser: HTMLParser):
         if not self._configuration: raise Exception("Base Scraper needs a configuration")
@@ -28,20 +25,17 @@ class SiteScraper(Asuratoon):
             print(body.html)
             return ScraperResult._get_cannot_parse(self._url, not not self._driver);
         # print(body.html)
-        result = re.search(r'ts_reader.run\(.+\);', body.html or '');
-        jsonStr = result.group() if result else '';
-        # print(jsonStr[len('ts_reader.run('): -len(');')])
-        jsonObj = json.loads(jsonStr[len('ts_reader.run('): -len(');')]);
+
         story_type = self._configuration.get_story_type(body, sections);
         lines = ScraperResult.get_lines(chapter) if story_type == StoryType.NOVEL else None;
-        byte_images = self._get_images_from_tags(img_tags=chapter.css(f'img[{self._configuration.src}]' if not callable(self._configuration.src) else 'img'), src=self._configuration.src) if story_type == StoryType.MANGA else None;
+        byte_images = self._get_images_from_tags(img_tags=chapter.css(f'img[{self._configuration.src}][alt*="chapter"]' if not callable(self._configuration.src) else 'img'), src=self._configuration.src) if story_type == StoryType.MANGA else None;
+        if (not lines or len(lines) == 0) and (not byte_images or len(byte_images) == 0):
+            print('No lines or image matches', self._url, chapter)
+            print(body.html);
+            return ScraperResult._get_cannot_parse(self._url, not not self._driver);
         return ScraperResult(
             story_type = story_type,
-            urls = UrlResult(
-                prev = jsonObj.get('prevUrl'),
-                current = self._url,
-                next = jsonObj.get('nextUrl'),
-            ),
+            urls = self._configuration.get_urls(chapter, sections),
             chapter = chapter,
             lines = lines,
             images = byte_images,
@@ -53,30 +47,41 @@ class SiteScraper(Asuratoon):
         return BasicConfiguration(
             get_story_type = lambda node, sections: get_story_type(sections),
             src = 'src',
-            get_chapter = lambda node, sections: node.css_first('#readerarea'),
+            get_chapter = lambda node, sections: node.css_first('body'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
             get_keys = lambda node, sections: KeyResult(
-                story = "-".join(sections[3].split('-')[:-2]),
-                chapter = "-".join(sections[3].split('-')[-2:]),
+                story = sections[4],
+                chapter = sections[6],
                 domain = None,
             ),
         );
 
     def get_titles(self, node: Node, sections: list[str]):
-        chapter = node.css_first('h1.entry-title')
-        story = node.css_first('.headpost .allc a')
+        chapter = node.css_first('button > h2')
         return KeyResult(
             chapter = chapter.text(),
             domain = None,
-            story = story.text(),
+            story = None,
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):
-        prev = node.css_first('.nextprev a.ch-prev-btn');
-        next = node.css_first('.nextprev a.ch-next-btn');
+        parent = node.css_first('.gap-x-3');
+        hrefs = parent.css('a');
+        prev, next = self.getPrevNext(hrefs);
+        prefix = 'https://asuracomic.net'
         return UrlResult(
-            prev = self.tryGetHref(prev),
+            prev = self.tryGetHref(prev, prefix),
             current = url,
-            next = self.tryGetHref(next),
+            next = self.tryGetHref(next, prefix),
         );
+
+    def getPrevNext(self, nodes: list[Node]):
+        prev = None;
+        next = None;
+        for node in nodes:
+            prevNode = node.css_first('svg.lucide-chevron-left');
+            if (prevNode): prev = node;
+            nextNode = node.css_first('svg.lucide-chevron-right');
+            if (nextNode): next = node;
+        return prev, next;

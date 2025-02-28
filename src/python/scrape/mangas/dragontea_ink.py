@@ -8,6 +8,6 @@ def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(BasicSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
         self._url = url;
         self._result = ScraperResult._get_cannot_parse(self._url);

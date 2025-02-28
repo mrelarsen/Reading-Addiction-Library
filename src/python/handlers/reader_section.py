@@ -36,7 +36,7 @@ class ReaderEventHandler():
         self.driver: Driver = driver;
         self.selector = '#rdr_content';
         self.word_callback = self.on_word;
-        self.scrape_service = ScrapeService(self.history, self.driver);
+        self.scrape_service = ScrapeService(self.history, self.driver, settings.get('story_headers', {}));
         self.tts_reader = TTSReader(settings=settings, word_callback=self.word_callback);
         self.auto_scroll = settings.get('auto_scroll') if settings.get('auto_scroll') == False else True;
         self.line: Optional[str] = None;
@@ -58,8 +58,9 @@ class ReaderEventHandler():
             self.parser = CSSParser();
         pass
 
-    def set_settings(self, settings):
+    def set_settings(self, settings: dict):
         self.tts_reader.set_settings(settings);
+        self.scrape_service.async_scraper.queueWorker.set_story_headers(settings.get('story_headers', {}));
 
     @sciter.script('get_settings')
     def get_settings(self) -> dict:
@@ -431,6 +432,8 @@ class ReaderEventHandler():
         self.line_number = count - 1;
         progress = f'({count}/{len(self.chapter)})';
         self.element.find_first('#rdr_lbl_progress').text = progress;
+        if self.line_number == 0:
+            self.call_javascript('scrollLineToTop', [self.line_number]);
         if self.auto_scroll and self.chapter.get(f"{self.line_number:05}"):
             self.scroll();
 

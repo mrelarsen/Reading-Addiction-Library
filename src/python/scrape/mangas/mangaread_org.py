@@ -3,18 +3,18 @@ from helpers.story_type import StoryType
 from helpers.driver import Driver
 from scrape.basic_scraper import BasicConfiguration;
 from scrape.configure_site_scraper import ConfigureSiteScraper;
-from selectolax.parser import Node
+from selectolax.parser import  Node
 from helpers.scraper_result import KeyResult, UrlResult;
 
 def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        # super().useHtml(url);
-        # super().useDriver(url, driver);
-        # super().useReDriver(url, driver);
-        super().useSession(url, session_dict);
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        super().useHtml(url, headers);
+        # super().useDriver(url, driver, headers);
+        # super().useReDriver(url, driver, headers);;
+        # super().useSession(url, session_dict, headers);
         
     def getConfiguration(self, url: str):
         prefix = 'https://mangaread.org';

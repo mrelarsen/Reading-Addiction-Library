@@ -1,5 +1,5 @@
 import random
-import requests;
+import requests
 
 class Meme():
     def __init__(self, meme_type: str|None = None):
@@ -8,6 +8,11 @@ class Meme():
         response = requests.get(f'https://meme-api.com/gimme/{meme_type}');
         if 'application/json' in response.headers.get('Content-Type', ''):
             json = response.json();
+            if 'titles' not in json or 'url' not in json:
+                self.title = 'Error fetching mime';
+                self.texts = ['Error fetching mime'];
+                self.images = None;
+                return;
             self.title = json['title'];
             response = requests.get(json['url']);
             img_type = response.headers.get('Content-Type', '').split("/")[-1];

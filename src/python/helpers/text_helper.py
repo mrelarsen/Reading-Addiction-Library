@@ -1,7 +1,7 @@
 import json
 import re;
 import html as htmlParser
-from typing import Tuple;
+from typing import Callable, Tuple;
 from helpers.scraper_result import ScraperResult
 from selectolax.parser import Node, HTMLParser
 
@@ -54,12 +54,17 @@ class TextHelper():
             script.remove();
 
     def clean_html(result: ScraperResult, parser = None):
-        TextHelper.__clean_node(result.chapter, parser);
+        TextHelper.__clean_node(result.chapter, parser, TextHelper.custom_rules(result));
         result.chapter.unwrap_tags(['element']);
         lines = ScraperResult.get_lines(result.chapter);
         result.lines = lines;
+    
+    def custom_rules(result: ScraperResult) -> Callable[[str], str]:
+        if result.keys.story == 'pokemon-but-im-a-breeder':
+            return lambda text: text.replace("an elf", "a beast").replace(" elf", " beast").replace("Elf", "Beast").replace(" elves", " beasts").replace("Elves", "Beasts").replace("Elven", "Beastly")
+        return lambda text: text;
 
-    def __clean_node(node: Node, parser, depth = 0, pad = False, ):
+    def __clean_node(node: Node, parser, custom_rules: Callable[[str], str], depth = 0, pad = False,):
         text = node.text(strip=True);
         if node.tag == 'script':
             node.remove();
@@ -90,9 +95,9 @@ class TextHelper():
             children = TextHelper.__split_p(node, children);
 
             for child in children:
-                TextHelper.__clean_node(child, parser, depth + 1, padding);
+                TextHelper.__clean_node(child, parser, custom_rules, depth + 1, padding);
         elif text.strip() != "" and node.parent != None:
-            next_node = TextHelper.__clean_textnode(node, pad);
+            next_node = TextHelper.__clean_textnode(node, custom_rules, pad);
             if next_node:
                 node.insert_after(next_node);
             node.remove();
@@ -131,7 +136,7 @@ class TextHelper():
             childA = children[i];
             childB = children[i + 1];
             if childA.tag == childB.tag and childA.tag in TextHelper.__get_inline_tags():
-                if all(value == childB.attributes[key] for (key, value) in childA.attributes.items()):
+                if all(value == childB.attributes.get(key) for (key, value) in childA.attributes.items()):
                     children_to_merge.append((childA, childB));
         children_to_merge.reverse();
         for (childA, childB) in children_to_merge:
@@ -166,7 +171,7 @@ class TextHelper():
                 return new_children;
         return children;
     
-    def __clean_textnode(node: Node, pad = False):
+    def __clean_textnode(node: Node, custom_rules: Callable[[str], str], pad = False):
         html = node.html.strip();
         if not html:
             return;
@@ -174,7 +179,7 @@ class TextHelper():
             if TextHelper.__is_json(html):
                 print(f'Remove tag with json');
                 return;
-        html = TextHelper.__clean_text(node.html);
+        html = TextHelper.__clean_text(custom_rules(node.html));
         if pad:
             return HTMLParser(f'<element>&nbsp;{html}&nbsp;</element>').body.child;
         else:

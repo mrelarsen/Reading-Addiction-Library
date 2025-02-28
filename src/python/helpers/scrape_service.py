@@ -8,10 +8,10 @@ from scrape.basic_scraper import ScraperResult
 from database.history import History   
     
 class ScrapeService():
-    def __init__(self, history: History, driver: Driver):
+    def __init__(self, history: History, driver: Driver, storyHeaders: dict[str, dict[str, str]]):
         self.history = history;
         self.driver = driver;
-        self.async_scraper = ScrapeHandler(driver);
+        self.async_scraper = ScrapeHandler(driver, storyHeaders);
         self.result: ScraperResult = None;
         self.urllist: Optional[list[str]] = None;
 
@@ -52,7 +52,8 @@ class ScrapeService():
         
     def get_urls(self):
         if self.result is None: return self.get_empty_urls();
-        task = WorkerTask(self.result.urls.current, self.urllist);
+        task = WorkerTask.new(self.result.urls.current, self.urllist);
+        if task is None: return self.get_empty_urls();
         next_task = task.get_ensuing_task(1, self.result)
         prev_task = task.get_ensuing_task(-1, self.result)
         return [

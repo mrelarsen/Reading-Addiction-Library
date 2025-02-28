@@ -35,6 +35,19 @@ document.on("click", "#sts_btn_query_all", () => {
   const stories = callStory("get_stories");
   setStories(stories);
 });
+document.on("click", "#sts_btn_complete_chapters", () => {
+  if (selectedStories.length == 1) {
+    const story_id = selectedStories[0].id;
+    console.log(
+      `Complete chapters of ${
+        selectedStories[0].name || selectedStories[0].key
+      }`
+    );
+    callStory("complete_story_chapters", [story_id]);
+    const chapterList = callStory("get_chapters", [story_id]);
+    setChapters(chapterList);
+  }
+});
 document.on("click", "#sts_btn_read_summaries", () =>
   callStory("read_summaries", [storyId])
 );

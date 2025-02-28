@@ -10,13 +10,13 @@ def get_story_type(sections) -> StoryType:
     return StoryType.NOVEL;
 
 class SiteScraper(BasicSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        super().__init__(url);
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        super().__init__(url=url, headers=headers);
 
     def _run(self, a, b, c):
-        self._result = self._scrape(None);
+        self._result = self._scrape(None, None, None);
         
-    def _scrape(self, _):
+    def _scrape(self, _, __, ___):
         id = self._url.split('/')[3].split('-')[0]
         res = requests.get("https://www.wattpad.com/apiv2/info?id=" + id, headers={'User-Agent': 'Mozilla/5.0'})
         chapters = res.json()['group']

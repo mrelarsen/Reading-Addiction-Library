@@ -10,16 +10,17 @@ def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        # super().useHtml(url);
-        # super().useDriver(url, driver, '.reading-content');
-        # super().useReDriver(url, driver);
-        super().useSession(url, session_dict);
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        super().useHtml(url, headers);
+        # super().useDriver(url, driver, headers);
+        # super().useReDriver(url, driver, headers);;
+        # super().useSession(url, session_dict, headers);
         
     def getConfiguration(self, url: str):
+        prefix = 'https://reset-scans.co';
         return BasicConfiguration(
             get_story_type = lambda node, sections: get_story_type(sections),
-            src = 'data-src',
+            src = 'src',
             get_chapter = lambda node, sections: node.css_first('.reading-content'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
@@ -32,11 +33,11 @@ class SiteScraper(ConfigureSiteScraper):
 
     def get_titles(self, node: Node, sections: list[str]):
         chapter = node.css_first('ol.breadcrumb li.active');
-        story = node.css('ol.breadcrumb li a')[1];
+        story = node.css('ol.breadcrumb li a')[2];
         return KeyResult(
-            chapter = chapter.text(),
+            chapter = chapter.text().strip(),
             domain = None,
-            story = story.text(),
+            story = story.text().strip(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):

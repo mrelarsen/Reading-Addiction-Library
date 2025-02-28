@@ -13,9 +13,8 @@ def get_story_type(sections) -> StoryType:
 
 class SiteScraper(Asuratoon):
     def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
-        super().__init__(url.replace('asuratoon.com', 'asuracomic.net', 1), driver, session_dict, headers);
         # super().useHtml(url, headers);
-        # super().useDriver(url, driver, '#readerarea');
+        super().useDriver(url, driver, headers, '#readerarea');
         # super().useReDriver(url, driver, headers);;
         # super().useSession(url, session_dict, headers);
 

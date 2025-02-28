@@ -48,8 +48,8 @@ export const storyColumnMetadata = {
     width: "100px",
     visible: true,
     sortable: true,
-    displayValue: (item, col) => item["updated"] || item["created"],
-    sortValue: (item, col) => item["updated"] || item["created"],
+    displayValue: (item, col) => item["latest"],
+    sortValue: (item, col) => item["latest"],
   },
   rating: {
     title: "Rating",

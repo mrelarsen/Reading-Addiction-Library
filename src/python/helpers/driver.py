@@ -50,7 +50,10 @@ class Driver():
     def __toggle_driver(self, callback: Optional[Callable] = None):
         self.__call_javascript('toggleLoadBar', [True]);
         firefox_options = webdriver.FirefoxOptions();
-        firefox_options.headless = True;
+        if 'headless' in dir(firefox_options):
+            firefox_options.headless = True;
+        elif 'add_argument' in dir(firefox_options):
+            firefox_options.add_argument("--headless");
         service = FirefoxService(executable_path="../../libraries/geckodriver/geckodriver.exe")
         self.__driver = webdriver.Firefox(service=service, options=firefox_options)
         self.__starting = False;

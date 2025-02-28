@@ -96,10 +96,12 @@ class TTSReader():
             return self.__count;
 
     def download(self, text: str, save_path: str, file_name: str):
-        download_path = os.path.abspath(save_path);
-        if not os.path.exists(download_path):
-            os.makedirs(download_path); 
-        abs_path = os.path.abspath(save_path + file_name + '.wav');
+        download_path = self.__settings.get('download_path');
+        if not download_path or not os.path.exists(download_path):
+            download_path = os.path.abspath(save_path) + '/';
+            if not os.path.exists(download_path):
+                os.makedirs(download_path); 
+        abs_path = os.path.abspath(download_path + file_name + '.wav');
         if self.__t:
             self.__t.join();
         self.__t = threading.Thread(target=self.download_async, args=(text, abs_path,), daemon=True);

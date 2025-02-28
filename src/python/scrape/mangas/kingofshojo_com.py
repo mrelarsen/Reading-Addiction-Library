@@ -1,54 +1,52 @@
+import json
 import re
-from typing import Any
 import requests
 from helpers.story_type import StoryType
 from helpers.driver import Driver
 from scrape.basic_scraper import BasicConfiguration;
-from scrape.configure_site_scraper import ConfigureSiteScraper;
 from selectolax.parser import Node, HTMLParser
 from helpers.scraper_result import KeyResult, ScraperResult, UrlResult;
+from scrape.mangas.asuracomic_net import SiteScraper as Asuratoon;
 
 def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
-class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        # super().useHtml(url);
-        super().useDriver(url, driver, '#readerarea');
-        # super().useReDriver(url, driver);
-        # super().useSession(url, session_dict);
+class SiteScraper(Asuratoon):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        # super().useHtml(url, headers);
+        # super().useDriver(url, driver, '#readerarea');
+        # super().useReDriver(url, driver, headers);;
+        super().useSession(url, session_dict, headers);
 
-    def _scrape(self, body: Node):
-        urls_finds = re.findall(r'("https?://[^\s]+")', body.html);
-        print(urls_finds)
-        urls = [url[1:-1] for url in urls_finds if url.endswith('.jpg"') and 'lunarscan.org/wp-content/uploads' in url];
-        urls = self.unique(urls)
-        print(urls)
-        if len(urls) == 0:
-            print(body.html)
-            return ScraperResult._get_error("No images were found", self._url);
+    def _scrape(self, body: Node, head: Node, parser: HTMLParser):
+        if not self._configuration: raise Exception("Base Scraper needs a configuration")
         sections = self._url.split('/');
-        img_element = lambda src: f'<img src="{src}"></img>'; 
-        img_elements = map(lambda x: img_element(x), urls);
-        chapter = HTMLParser(f'<div>{"".join(img_elements)}</div>').body
-        byte_images = self._get_images_from_tags(img_tags=chapter.css('img'));
+        chapter = self._configuration.get_chapter(body, sections);
+        if chapter is None or not isinstance(chapter, Node):
+            print('No chapter, check url', self._url, chapter)
+            print(body.html)
+            return ScraperResult._get_cannot_parse(self._url, not not self._driver);
+        # print(body.html)
+        result = re.search(r'ts_reader.run\(.+\);', body.html or '');
+        jsonStr = result.group() if result else '';
+        # print(jsonStr[len('ts_reader.run('): -len(');')])
+        jsonObj = json.loads(jsonStr[len('ts_reader.run('): -len(');')]);
         story_type = self._configuration.get_story_type(body, sections);
+        lines = ScraperResult.get_lines(chapter) if story_type == StoryType.NOVEL else None;
+        byte_images = self._get_images_from_tags(img_tags=chapter.css(f'img[{self._configuration.src}]' if not callable(self._configuration.src) else 'img'), src=self._configuration.src) if story_type == StoryType.MANGA else None;
         return ScraperResult(
             story_type = story_type,
-            urls = self._configuration.get_urls(body, sections),
+            urls = UrlResult(
+                prev = jsonObj.get('prevUrl'),
+                current = self._url,
+                next = jsonObj.get('nextUrl'),
+            ),
             chapter = chapter,
-            lines = None,
+            lines = lines,
             images = byte_images,
             titles = self._configuration.get_titles(body, sections),
             keys = self._configuration.get_keys(body, sections),
-        )
-    
-    def unique(self, list1: list[Any]):
-        unique_list = [];
-        for x in list1:
-            if x not in unique_list:
-                unique_list.append(x);
-        return unique_list;
+        );
         
     def getConfiguration(self, url: str):
         return BasicConfiguration(
@@ -57,7 +55,7 @@ class SiteScraper(ConfigureSiteScraper):
             get_chapter = lambda node, sections: node.css_first('#readerarea'),
             get_titles = lambda node, sections: self.get_titles(node, sections),
             get_urls = lambda node, sections: self.get_urls(node, sections, url),
-            get_keys = lambda node, sections: self.Object(
+            get_keys = lambda node, sections: KeyResult(
                 story = "-".join(sections[3].split('-')[:-2]),
                 chapter = "-".join(sections[3].split('-')[-2:]),
                 domain = None,
@@ -66,10 +64,11 @@ class SiteScraper(ConfigureSiteScraper):
 
     def get_titles(self, node: Node, sections: list[str]):
         chapter = node.css_first('h1.entry-title')
+        story = node.css_first('.ts-breadcrumb > div > span:nth-child(2)')
         return KeyResult(
             chapter = chapter.text(),
             domain = None,
-            story = None,
+            story = story.text(),
         );
 
     def get_urls(self, node: Node, sections: list[str], url: str):

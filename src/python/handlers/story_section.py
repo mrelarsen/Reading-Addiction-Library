@@ -15,6 +15,10 @@ class StoryEventHandler(sciter.EventHandler):
     def save_chapter_details(self, chapter_id: int, chapter_name: str, chapter_desc: str, chapter_status: str):
         return self.history.save_chapter_details(chapter_id, chapter_name, chapter_desc, chapter_status);
         
+    @sciter.script('complete_story_chapters')
+    def complete_story_chapters(self, story_id: int):
+        return self.history.complete_story_chapters(story_id);
+        
     @sciter.script('save_story_details')
     def save_story_details(self, story_id: int, story_name: str, story_desc: str, story_rating = '0.0', tags = ''):
         return self.history.save_story_details(story_id, story_name, story_desc, float(story_rating), tags);

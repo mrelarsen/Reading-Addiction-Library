@@ -1,4 +1,4 @@
-import sqlite3, uuid, os
+import sqlite3, uuid, os, math, time
 from typing import Any, Tuple;
 from datetime import datetime
 from helpers.reading_status import ReadingStatus
@@ -126,6 +126,12 @@ class StoryDatabase():
                 domain_id INTEGER NOT NULL,
                 FOREIGN KEY(domain_id) REFERENCES domain(id)
                 )""")
+            c.execute("""CREATE INDEX story_uuid_idx ON story (uuid);""")
+            c.execute("""CREATE INDEX story_type_idx ON story (type);""")
+            c.execute("""CREATE INDEX domain_uuid_idx ON domain (uuid);""")
+            c.execute("""CREATE INDEX domain_key_idx ON domain (key);""")
+            c.execute("""CREATE INDEX chapter_uuid_idx ON chapter (uuid);""")
+            c.execute("""CREATE INDEX chapter_key_idx ON chapter (key);""")
 
     def esc_quotes(self, string: str):
         new_string = string.replace('"','""');
@@ -172,15 +178,16 @@ class StoryDatabase():
         cursor = conn.cursor();
         created_latest_chapter = "(SELECT chapter.created FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.created ASC LIMIT 1) AS created"
         updated_latest_chapter = "(SELECT chapter.updated FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id ORDER BY chapter.updated DESC LIMIT 1) AS updated"
+        latest_latest_chapter = "(SELECT max(max(coalesce(chapter.created, 0)), max(coalesce(chapter.updated, 0))) as updated FROM chapter JOIN domain ON domain.id = chapter.domain_id WHERE story.id = domain.story_id) as latest"
         key_first_domain = "(SELECT key FROM domain WHERE story.id = domain.story_id LIMIT 1) AS key"
         domains = "(SELECT group_concat(domain, ' ') as domains FROM domain WHERE story.id = domain.story_id) AS domains"
         if pure:
             cursor.execute(f"SELECT * FROM story; ");
         elif not term:
-            cursor.execute(f"SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {key_first_domain}, {domains} FROM story; ");
+            cursor.execute(f"SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {latest_latest_chapter}, {key_first_domain}, {domains} FROM story; ");
         else:
             where_match_term = f"""WHERE name LIKE "%{term}%" OR key LIKE "%{term}%" """
-            cursor.execute(f"""SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {key_first_domain}, {domains} FROM story {where_match_term}; """);
+            cursor.execute(f"""SELECT *, {created_latest_chapter}, {updated_latest_chapter}, {latest_latest_chapter}, {key_first_domain}, {domains} FROM story {where_match_term}; """);
         data = cursor.fetchall();
         conn.close();
         return data;
@@ -226,6 +233,13 @@ class StoryDatabase():
         data = cursor.fetchall();
         conn.close();
         return data[0];
+
+    def complete_story_chapters(self, story_id: int):
+        conn = sqlite3.connect(self.database_path);
+        cursor = conn.cursor();
+        cursor.execute(f"""UPDATE chapter as c1 SET status = ? FROM chapter as c2 JOIN domain as d on d.id = c2.domain_id WHERE c1.id = c2.id AND d.story_id = ? """, (ReadingStatus.COMPLETED.value, story_id));
+        conn.commit();
+        conn.close();
 
     def update_chapter(self, chapter_id: int, chapter_name: str, chapter_desc: str, chapter_status:str):
         conn = sqlite3.connect(self.database_path);
@@ -298,6 +312,7 @@ class StoryDatabase():
         counter = 0;
         increment = 500;
         while counter < len(commands):
+            print (f'Stories: {counter/increment if counter > 0 else 0}/{len(commands)} - {len(commands)/counter if counter > 0 else 0}', end='\r');
             cursor.executemany("INSERT INTO story (uuid,name,desc,type,rating,tags) VALUES (?,?,?,?,?,?)", commands[counter: min(counter+increment, len(commands))]);
             counter += increment;
         created_stories = cursor.execute("SELECT id,uuid,name FROM story WHERE id > ? ORDER BY id ASC", (last_story_id,)).fetchall();
@@ -313,6 +328,7 @@ class StoryDatabase():
         commands = [x.getInsertCommand() for x in missing_domains];
         counter = 0;
         while counter < len(commands):
+            print (f'Domains: {counter/increment if counter > 0 else 0}/{len(commands)} - {len(commands)/counter if counter > 0 else 0}', end='\r');
             cursor.executemany("INSERT INTO domain (uuid,key,domain,story_id) VALUES (?,?,?,?)", commands[counter: min(counter+increment, len(commands))]);
             counter += increment;
         created_domains = cursor.execute(f"SELECT id,uuid,domain,key FROM domain WHERE id > {last_domain_id} ORDER BY id ASC").fetchall();
@@ -327,6 +343,7 @@ class StoryDatabase():
         commands = [x.getInsertCommand() for x in missing_chapters];
         counter = 0;
         while counter < len(commands):
+            print (f'Chapters: {counter/increment if counter > 0 else 0}/{len(commands)} - {len(commands)/counter if counter > 0 else 0}', end='\r');
             cursor.executemany("INSERT INTO chapter (uuid,name,desc,key,url,status,created,updated,domain_id) VALUES (?,?,?,?,?,?,?,?,?)", commands[counter: min(counter+increment, len(commands))]);
             counter += increment;
         created_chapters = cursor.execute(f"SELECT chapter.id,chapter.uuid,chapter.name,chapter.key,domain.id as d_id,domain.domain as d_name,domain.key as d_key,story.id as s_id,story.name as s_name FROM chapter LEFT JOIN domain ON domain.id = chapter.domain_id LEFT JOIN story ON story.id = domain.story_id WHERE chapter.id > {last_chapter_id} ORDER BY chapter.id ASC").fetchall();

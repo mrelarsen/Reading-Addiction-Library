@@ -11,13 +11,13 @@ def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        # super().useHtml(url);
-        # super().useDriver(url, driver);
-        # super().useReDriver(url, driver);
-        super().useSession(url, session_dict);
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        # super().useHtml(url, headers);
+        # super().useDriver(url, driver, headers);
+        # super().useReDriver(url, driver, headers);;
+        super().useSession(url, session_dict, headers);
 
-    def _scrape(self, body: Node):
+    def _scrape(self, body: Node, head: Node, parser: HTMLParser):
         result = re.search(r'var chapImages = \'\S+\'', body.html or '');
         urls_finds = result.group() if result else '';
         sections = self._url.split('/');

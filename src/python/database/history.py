@@ -22,6 +22,9 @@ class History():
     def get_chapter(self, id: int):
         return self.db.get_chapter(id);
 
+    def complete_story_chapters(self, story_id: int):
+        self.db.complete_story_chapters(story_id);
+
     def save_chapter_details(self, chapter_id: int, chapter_name: str, chapter_desc: str, chapter_status: str):
         return self.db.update_chapter(chapter_id, chapter_name, chapter_desc, chapter_status);
         

@@ -11,11 +11,11 @@ def get_story_type(sections) -> StoryType:
     return StoryType.NOVEL;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        # super().useHtml(url);
-        super().useDriver(url, driver, '.chapter-content');
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        # super().useHtml(url, headers);
+        super().useDriver(url, driver, headers, '.chapter-content');
         # super().useReDriver(url, driver, '.chapter-content');
-        # super().useSession(url, session_dict);
+        # super().useSession(url, session_dict, headers);
         
     def getConfiguration(self, url: str):
         return BasicConfiguration(

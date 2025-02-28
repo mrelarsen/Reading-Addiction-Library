@@ -12,9 +12,10 @@ from helpers.scraper_result import ScraperResult, KeyResult, UrlResult
 from selenium.webdriver.remote.webdriver import WebDriver
 
 class BasicConfiguration():
-    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_titles: Callable[[Node, list[str]], KeyResult], get_urls: Callable[[Node, list[str]], UrlResult], get_keys: Callable[[Node, list[str]], KeyResult], get_chapter: Callable[[Node, list[str]], Node]|None = None, src: Union[str, Callable[[Node], str]]|None = None):
+    def __init__(self, get_story_type: Callable[[Node, list[str]], StoryType], get_titles: Callable[[Node, list[str]], KeyResult], get_urls: Callable[[Node, list[str]], UrlResult], get_keys: Callable[[Node, list[str]], KeyResult], get_chapter: Callable[[Node, list[str]], Node]|None = None, src: Union[str, Callable[[Node], str]]|None = None, alt_selector: str|None = None):
         self.get_story_type = get_story_type;
         self.src = src; # manga
+        self.alt_selector = alt_selector; # manga
         self.get_chapter = get_chapter; # tts
         self.get_titles = get_titles;
         self.get_urls = get_urls;
@@ -57,7 +58,7 @@ class BasicScraper():
             child = child.next;
         return children;
 
-    def _get_images_from_tags(self, img_tags: list[Node]=[], src = 'src'):
+    def _get_images_from_tags(self, img_tags: list[Node]=[], src = 'src', img_selector = 'img'):
         img_urls = [];
         if len(img_tags) == 0:
             print("No image tags were found");
@@ -65,33 +66,37 @@ class BasicScraper():
         for img_tag in img_tags:
             if callable(src):
                 img_urls.append(src(img_tag));
-            elif src in img_tag.attributes and img_tag.attributes[src]:
+            elif src in img_tag.attributes and img_tag.attributes.get(src):
                 img_urls.append(img_tag.attributes[src].strip());
         if len(img_urls) == 0:
             print("No images were found");
             return [];
-        return self._get_images(img_urls, src);
+        return self._get_images(img_urls, src, img_selector);
 
-    def _get_images(self, img_urls: list[str] = [], src = 'src', retry = 0):
-        threads, images, errors = self._get_image_threads(img_urls, src)
+    def _get_images(self, img_urls: list[str] = [], src = 'src', img_selector = 'img', retry = 0):
+        threads, images, errors = self._get_image_threads(img_urls, src, img_selector)
         for thread in threads:
             thread.start();
         for thread in threads:
             thread.join();
-        self._handle_failure_and_logging(img_urls, src, images, errors, retry);
+        self._handle_failure_and_logging(img_urls, src, img_selector, images, errors, retry);
         return [image for image_sublist in images for image in image_sublist];
 
-    def _handle_failure_and_logging(self, img_urls: list[str], src, images: list, errors: list, retry: int):
+    def _handle_failure_and_logging(self, img_urls: list[str], src, img_selector, images: list, errors: list, retry: int):
         if all([True if len(x) == 0 else False for x in images]) and retry < 2:
-            [print(f'Image error: {error}') for error_list in errors for error in error_list];
+            if len(errors) == 0:
+                print(f'No images, no errors found for {len(img_urls)} uls: [{",".join(img_urls)}]')
+            else:
+                for error_list in errors:
+                    for error in error_list: print(f'Image error: {error}')
             print(f'Retry fetcing images, {retry + 1} attempt');
-            return self._get_images(img_urls, src, retry + 1);
+            return self._get_images(img_urls, src, img_selector, retry + 1);
         for i,x in enumerate(images):
             if len(x) == 0:
                 print(f'Failed to parse image {i+1} of {len(images)} images from the url: {img_urls[i]}');
                 for error in errors[i]: print(f'Image error: {error}');
 
-    def _get_image_threads(self, img_urls: list[str], src):
+    def _get_image_threads(self, img_urls: list[str], src, img_selector):
         threads: list[threading.Thread] = [];
         images = [];
         errors = [];
@@ -104,37 +109,37 @@ class BasicScraper():
             error_list: list[str] = [];
             images.append(image_list);
             errors.append(error_list);
-            t = threading.Thread(target=self._get_image_async, args=(image_list, img_url, src, error_list), daemon=False);
+            t = threading.Thread(target=self._get_image_async, args=(image_list, img_url, src, img_selector, error_list,), daemon=False);
             threads.append(t);
         return threads, images, errors;
 
-    def _get_image_async(self, images: list, img_url: str, src, errors: list):
+    def _get_image_async(self, images: list, img_url: str, src, img_selector, errors: list):
+        # errors.append(f"error start");
         url_no_params = img_url.split('?')[0];
         file_name, ext = os.path.splitext(url_no_params);
-        merged_headers = dict();
-        merged_headers.update({
+        headers = {
             "Accept": f"image/webp,image/{ext[1:]}",
             "Host": img_url.split("/")[2],
             "Referer": "/".join(self._url.split("/")[:5]),
             "Sec-Fetch-Dest": "image",
             "Sec-Fetch-Mode": "no-cors",
             "Sec-Fetch-Site": "cross-site",
-        });
-        merged_headers.update(self._headers);
+        };
         for i in range(3):
             # errors.append(f"Try {i} of 3");
-            if i == 0 or not self._driver or callable(src):
-                response = self._try_get_response(img_url, self._session, merged_headers, False);
+            if i == 0 or '_driver' not in dir(self) or not self._driver or callable(src):
+                response = self._try_get_response(img_url, self._session, {**headers, **self._headers}, False);
             else:
-                img_type, img_file = BasicScraper.get_image(self._driver, img_url, src);
-                # errors.append(img_type);
+                img_type, img_file = BasicScraper.get_image(self._driver, img_url, src, img_selector);
+                errors.append(img_type);
                 if not img_file or not img_type: continue;
                 success = self._extract_image(images, img_file, img_type);
                 if success: break;
                 continue;
             if not response or not response.ok: 
-                errors.append("Response status code: " + str(response.status_code))
+                errors.append(("Response status code: " + str(response.status_code)) if response else 'Response not found');
                 continue;
+            # errors.append('type');
             img_file = response.content
             img_type = response.headers.get("Content-Type");
             if not img_type or img_type.split("/")[-1] == 'error':
@@ -146,10 +151,10 @@ class BasicScraper():
             errors.append(f"Error fetching image: {img_url}")
     
     @staticmethod
-    def get_image(driver: WebDriver, img_url: str, src:str):
+    def get_image(driver: WebDriver, img_url: str, src: str, img_selector: str):
         base64string = driver.execute_script("var c = document.createElement('canvas');"
                        + "var ctx = c.getContext('2d');"
-                       + f'var img = document.querySelector(`img[{src}="{img_url}"]`);'
+                       + f'var img = document.querySelector(`{img_selector}[{src}="{img_url}"]`);'
                        + "if (img == null) return null;"
                        + "c.height=img.naturalHeight;"
                        + "c.width=img.naturalWidth;"

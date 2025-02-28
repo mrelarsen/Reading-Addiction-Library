@@ -42,6 +42,7 @@ class ScraperResult():
         self.driver_required = driver_requires_reset or driver_required;
         self.driver_requires_reset = driver_requires_reset;
         self.counter = 1;
+        self.driver = None;
     
     def is_loading(self):
         return self.loading or self.driver_required or self.driver_requires_reset;

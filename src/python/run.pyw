@@ -1,6 +1,6 @@
 import json
 import os
-import run_paths;
+import run_paths; # needed
 import sciter
 from handlers.reader_section import ReaderEventHandler
 from helpers.driver import Driver
@@ -53,8 +53,7 @@ class Window(sciter.Window):
             with open('./settings.json', "r") as f:
                 content = f.read();
                 json_dict: dict = json.loads(content);
-                for key, value in json_dict.items():
-                    settings[key] = value;
+                settings = {**settings, **json_dict};
         return settings;
 
     def on_data_loaded(self, nm):
@@ -109,5 +108,5 @@ if __name__ == "__main__":
 
     # load file
     frame.load_file("../javascript/run.htm")
-
+    frame.expand()
     frame.run_app()

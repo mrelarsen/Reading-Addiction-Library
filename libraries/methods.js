@@ -2,6 +2,7 @@ globalThis.appendOn = appendOn;
 globalThis.replaceLast = replaceLast;
 globalThis.replaceId = replaceId;
 globalThis.scrollTo = scrollTo;
+globalThis.scrollLineToTop = scrollLineToTop;
 globalThis.scrollToCenterOf = scrollToCenterOf;
 globalThis.scrollLineToCenter = scrollLineToCenter;
 globalThis.onClick = onClick;
@@ -38,6 +39,23 @@ export function scrollTo(selector, behavior = "smooth", block = "start") {
   document.$(selector).scrollIntoView({
     behavior: behavior,
     block: block,
+  });
+}
+
+export function scrollLineToTop(lineNumber) {
+  const element = document.$(`#line-${lineNumber.toString().padStart(5, "0")}`);
+  if (!element) {
+    console.warn(
+      "Cannot scroll, could not find element to center on:",
+      selector
+    );
+    return;
+  }
+  const main = element.$p(".scroll-parent");
+  main.scrollTo({
+    left: 0,
+    top: 0,
+    behavior: "smooth",
   });
 }
 

@@ -1,21 +1,21 @@
 import requests
 from helpers.driver import Driver
 from helpers.story_type import StoryType
-from scrape.mangas.asuratoon_com import SiteScraper as Asuratoon;
+from scrape.mangas.asuracomic_net import SiteScraper as Asuratoon;
 
 def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(Asuratoon):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        super().__init__(url.replace('asura.gg', 'asuratoon.com', 1), driver, session_dict);
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        super().__init__(url.replace('asura.gg', 'asuracomic.net', 1), driver, session_dict, headers);
 
 # class SiteScraper(ConfigureSiteScraper):
     # def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-    #     # super().useHtml(url);
+    #     # super().useHtml(url, headers);
     #     super().useDriver(url, driver);
-    #     # super().useReDriver(url, driver);
-    #     # super().useSession(url, session_dict);
+    #     # super().useReDriver(url, driver, headers);;
+    #     # super().useSession(url, session_dict, headers);
         
     # def getConfiguration(self, url: str):
     #     return BasicConfiguration(

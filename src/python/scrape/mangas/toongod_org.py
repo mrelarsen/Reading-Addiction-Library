@@ -10,13 +10,13 @@ def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
         self.url = url;
         self._result = ScraperResult._get_cannot_parse(self._url);
-        # super().useHtml(url);
+        # super().useHtml(url, headers);
         # super().useDriver(url, driver, '.reading-content');
-        # super().useReDriver(url, driver);
-        # super().useSession(url, session_dict);
+        # super().useReDriver(url, driver, headers);;
+        # super().useSession(url, session_dict, headers);
         
     def getConfiguration(self, url: str):
         return BasicConfiguration(

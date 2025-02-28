@@ -14,9 +14,9 @@ def get_story_type(sections) -> StoryType:
     return StoryType.NOVEL;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, Session], headers: dict[str, str]):
         # self.useHtml(url);
-        self.useSession(url, session_dict);
+        self.useSession(url, session_dict, headers);
         
     def _handle(self, url: str, driver: WebDriver, session: requests.Session, headers: Any):
         try:

@@ -12,16 +12,16 @@ def get_story_type(sections) -> StoryType:
     return StoryType.NOVEL;
 
 class SiteScraper(BasicSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
         if not driver.is_running():
             self._result = ScraperResult._get_driver_required(url, get_story_type(None));
         else:
             self._setup_folders();
             self._set_strings();
-            super().__init__(url, driver.get());
+            super().__init__(url=url, driver=driver.get(), headers=headers);
 
     def _handle(self, _, __, ___, ____):
-        self._result = self._scrape(None)
+        self._result = self._scrape(None, None, None)
 
     def _set_strings(self):
         self._get_file_name = lambda file_name: f'{os.path.splitext(file_name)[0]}'
@@ -30,7 +30,7 @@ class SiteScraper(BasicSiteScraper):
         self._get_html_path = lambda filename: f'{self._html_download_path}/{filename}.html'
         pass
         
-    def _scrape(self, _):
+    def _scrape(self, _, __, ___):
         supported_url, exit_status = check_url(self._url, False, 0)
         fic = None
         html_file_name = None;

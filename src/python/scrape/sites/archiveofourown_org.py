@@ -2,7 +2,7 @@ import os;
 import re;
 import requests
 import html as htmlEncoder;
-from selectolax.parser import Node
+from selectolax.parser import Node, HTMLParser
 from helpers.story_type import StoryType
 from scrape.basic_scraper import ScraperResult;
 from helpers.driver import Driver;
@@ -12,10 +12,10 @@ def get_story_type(sections) -> StoryType:
     return StoryType.NOVEL;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
         self._setup_folders();
         self._set_strings();
-        super().useHtml(url);
+        super().useHtml(url, headers);
     
     def getConfiguration(self, url: str):
         return None;
@@ -26,7 +26,7 @@ class SiteScraper(ConfigureSiteScraper):
         self._get_html_path = lambda filename: f'{self._html_download_path}/{filename}.html'
         pass
         
-    def _scrape(self, node: Node):
+    def _scrape(self, node: Node, head: Node, parser: HTMLParser):
         html_path = None;
         try:
             story = node.css_first('.header .heading a');

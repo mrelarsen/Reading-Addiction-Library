@@ -11,6 +11,7 @@ class WorkerTask():
         self.adjecent = adjecent;
         self.tries = 0;
         self.module_name, self.alt_url = self.__get_module_name(self.url);
+        if 'javascript' in self.module_name: return;
         self.module_class, get_story_type = self.__get_module(self.module_name);
         self.module_story_type = get_story_type(self.url.split('/'));
         pass
@@ -18,13 +19,18 @@ class WorkerTask():
     def increment(self):
         self.tries += 1;
     
+    @staticmethod
+    def new(url: str|None = None, urllist: list[str]|None = None, adjecent = False):
+        new_task = WorkerTask(url, urllist, adjecent)
+        return new_task if hasattr(new_task, 'module_class') and new_task.module_class else None;
+
     def get_ensuing_task_from_list(self, dir: int, result: ScraperResult):
         if self.urllist and not result.is_loading():
             index, url = self.get_match(self.url);
             if url and (url[0] != '!' or dir < 0):
                 next_index = dir + index;
                 if index != -1 and next_index >= 0 and next_index < len(self.urllist):
-                    return WorkerTask(self.urllist[next_index], self.urllist, True);
+                    return WorkerTask.new(self.urllist[next_index], self.urllist, True);
             elif dir > 0 and url:
                 next = None if result is None else result.get_ensuing_url(dir);
                 if next:
@@ -32,16 +38,16 @@ class WorkerTask():
                     if next_url:
                         self.urllist.remove(next_url);
                     self.urllist.insert(index + 1, '!' + next);
-                    return WorkerTask(next, self.urllist, True);
+                    return WorkerTask.new(next, self.urllist, True);
                 else:
                     if index + 1 < len(self.urllist):
-                        return WorkerTask(self.urllist[index + 1], self.urllist, True);
+                        return WorkerTask.new(self.urllist[index + 1], self.urllist, True);
         return None;
 
     def get_ensuing_task_from_result(self, dir: int, result: ScraperResult):
         url = None if result is None else result.get_ensuing_url(dir);
         if url:
-            return WorkerTask(url, None, True);
+            return WorkerTask.new(url, None, True);
         return None;
 
     def get_ensuing_task(self, dir: int, result: ScraperResult):
@@ -92,14 +98,16 @@ class WorkerTask():
             site = getattr(module, 'SiteScraper') if hasattr(module, 'SiteScraper') else None;
             file = getattr(module, 'FileScraper') if hasattr(module, 'FileScraper') else None;
             storytype = getattr(module, 'get_story_type') if hasattr(module, 'get_story_type') else None;
+            if storytype is None: print('storytype not found for module: ', modulename, dir(module))
             return site or file, storytype;
         print('Module not found: %s' % modulename)
         return None, None;
 
     def __find_module(self, modulename: str):
         if not modulename: return None;
-        locations = ['scrape.sites', 'scrape.mangas', 'scrape.files'];
+        locations = ['scrape.sites', 'scrape.mangas', 'scrape.files', 'scrape.private'];
         for location in locations:
+            if not os.path.exists(location.replace('.', '/')): continue;
             domain_spec = importlib.util.find_spec(f'{location}.{modulename}')
             if domain_spec:
                 return f'{location}.{modulename}';

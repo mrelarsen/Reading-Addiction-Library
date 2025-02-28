@@ -1,4 +1,5 @@
-import json;
+import json
+import re;
 import requests;
 from helpers.scraper_result import ScraperResult
 from helpers.story_type import StoryType
@@ -11,56 +12,68 @@ def get_story_type(sections) -> StoryType:
     return StoryType.MANGA;
 
 class SiteScraper(ConfigureSiteScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
-        # super().useHtml(url);
-        # super().useDriver(url, driver);
-        # super().useReDriver(url, driver);
-        super().useSession(url, session_dict);
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
+        # super().useHtml(url, headers);
+        # super().useDriver(url, driver, headers);
+        # super().useReDriver(url, driver, headers);;
+        super().useSession(url, session_dict, headers);
 
-    def _scrape(self, body: Node):
+    def _scrape(self, body: Node, head: Node, parser: HTMLParser):
         prefix = 'https://mangapark.net';
-        sections = self._url.split('/');
-        script_element = body.css_first('#__NEXT_DATA__');
-        json_script_element = json.loads(script_element.text());
-        chapter_data = self.walk(json_script_element, 'props.pageProps.dehydratedState.queries.0.state.data.data');
+        json_script = parser.css_first('script[type="qwik/json"]');
+        urls_finds = re.findall(r'"(https?://[^"]+/media/[^"]+)"', json_script.text());
+
+        button = body.css('span.hidden');
+        prevs = [x for x in button if x.text().startswith('Prev') and x.parent.tag == 'a'];
+        nexts = [x for x in button if x.text().startswith('Next') and x.parent.tag == 'a'];
+
         img_element = lambda src: f'<img src="{src}"></img>'; 
-        concat=[]
-        for i in range(len(self.walk(chapter_data, 'imageSet.httpLis'))):
-            concat.append(f"{self.walk(chapter_data, 'imageSet.httpLis')[i]}?{self.walk(chapter_data, 'imageSet.wordLis')[i]}")
-        img_elements = map(lambda x: img_element(x), concat);
+        img_elements = map(lambda x: img_element(x), urls_finds);
         chapter = HTMLParser(f'<div>{"".join(img_elements)}</div>').body
         byte_images = self._get_images_from_tags(img_tags=chapter.css('img'));
-        story_id = self.walk(chapter_data, 'comicNode.data.id');
-        sourceId = chapter_data['sourceId'];
-        lang = chapter_data['lang'];
-        request = self.makeRequest(story_id, chapter_data['serial'], lang);
-        content = json.loads(self._session.post(f'{prefix}/apo/', json=request, headers=self._headers).content);
-        next_chapters = self.walk(content, 'data.get_content_chapterSiblings.nextNodes');
-        next_chapter_same_source = lambda: next_chapters and next(x for x in next_chapters if self.walk(x, 'data.sourceId') == sourceId and self.walk(x, 'data.lang') == lang);
-        next_chapter_next_source = lambda: next_chapters and next(x for x in next_chapters if self.walk(x, 'data.lang') == lang);
-        next_chapter = next_chapter_same_source() or next_chapter_next_source();
-        prev_chapters = self.walk(content, 'data.get_content_chapterSiblings.prevNodes');
-        prev_chapter_same_source = lambda: prev_chapters and next(x for x in prev_chapters if self.walk(x, 'data.sourceId') == sourceId and self.walk(x, 'data.lang') == lang);
-        prev_chapter_next_source = lambda: prev_chapters and next(x for x in prev_chapters if self.walk(x, 'data.lang') == lang);
-        prev_chapter = prev_chapter_same_source() or prev_chapter_next_source();
+
+        sections = self._url.split('/');
+        # script_element = body.css_first('#__NEXT_DATA__');
+        # json_script_element = json.loads(script_element.text());
+        # chapter_data = self.walk(json_script_element, 'props.pageProps.dehydratedState.queries.0.state.data.data');
+        # img_element = lambda src: f'<img src="{src}"></img>'; 
+        # concat=[]
+        # for i in range(len(self.walk(chapter_data, 'imageSet.httpLis'))):
+        #     concat.append(f"{self.walk(chapter_data, 'imageSet.httpLis')[i]}?{self.walk(chapter_data, 'imageSet.wordLis')[i]}")
+        # img_elements = map(lambda x: img_element(x), concat);
+        # chapter = HTMLParser(f'<div>{"".join(img_elements)}</div>').body
+        # byte_images = self._get_images_from_tags(img_tags=chapter.css('img'));
+        # story_id = self.walk(chapter_data, 'comicNode.data.id');
+        # sourceId = chapter_data['sourceId'];
+        # lang = chapter_data['lang'];
+        # request = self.makeRequest(story_id, chapter_data['serial'], lang);
+        # content = json.loads(self._session.post(f'{prefix}/apo/', json=request, headers=self._headers).content);
+        # next_chapters = self.walk(content, 'data.get_content_chapterSiblings.nextNodes');
+        # next_chapter_same_source = lambda: next_chapters and next(x for x in next_chapters if self.walk(x, 'data.sourceId') == sourceId and self.walk(x, 'data.lang') == lang);
+        # next_chapter_next_source = lambda: next_chapters and next(x for x in next_chapters if self.walk(x, 'data.lang') == lang);
+        # next_chapter = next_chapter_same_source() or next_chapter_next_source();
+        # prev_chapters = self.walk(content, 'data.get_content_chapterSiblings.prevNodes');
+        # prev_chapter_same_source = lambda: prev_chapters and next(x for x in prev_chapters if self.walk(x, 'data.sourceId') == sourceId and self.walk(x, 'data.lang') == lang);
+        # prev_chapter_next_source = lambda: prev_chapters and next(x for x in prev_chapters if self.walk(x, 'data.lang') == lang);
+        # prev_chapter = prev_chapter_same_source() or prev_chapter_next_source();
         return ScraperResult(
             story_type = get_story_type(sections),
             urls = UrlResult(
-                prev = prefix + self.walk(prev_chapter, 'data.urlPath') if prev_chapter else None,
-                current = prefix + chapter_data['urlPath'],
-                next = prefix + self.walk(next_chapter, 'data.urlPath') if next_chapter else None,
+                prev = len(prevs) > 0 and self.tryGetHref(prevs[0].parent, prefix),
+                current = self._url,
+                next = len(nexts) > 0 and self.tryGetHref(nexts[0].parent, prefix),
             ),
             chapter = chapter,
             lines = None,
             images = byte_images,
             titles = KeyResult(
-                chapter = chapter_data['dname'],
+                chapter = body.css_first('h6 a.link-primary').text(),
                 domain = None,
-                story = None,
+                story = body.css_first('h3 a.link-pri').text(),
             ),
             keys = KeyResult(
-                chapter = str(chapter_data['id']),
-                story = str(story_id),
+                chapter = sections[4],
+                story = sections[5],
                 domain = None,
             ),
         );

@@ -13,7 +13,7 @@ def get_story_type(sections) -> StoryType:
     return StoryType.NOVEL;
 
 class FileScraper(BasicFileScraper):
-    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session]):
+    def __init__(self, url: str, driver: Driver, session_dict: dict[str, requests.Session], headers: dict[str, str]):
         super().__init__(url);
 
     def _try_read_file(self, path: str):
